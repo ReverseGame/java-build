@@ -59,7 +59,7 @@ jobs:
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
-                    text: '部署链接: $'
+                    text: '部署链接: '
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -130,5 +130,5 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
                 - - tag: text
                     text: '镜像tag: '
-                  - tag: a
+                  - tag: text
                     text: ${{ env.tag }}
