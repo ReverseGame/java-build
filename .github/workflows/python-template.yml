@@ -26,14 +26,6 @@ on:
         required: true
       dockerPassword:
         required: true
-      mavenUrl:
-        required: true
-      mavenId:
-        required: true
-      mavenUsername:
-        required: true
-      mavenPassword:
-        required: true
       kubeConfig:
         required: true
 
