@@ -32,7 +32,7 @@ on:
 
 
 jobs:
-  java_reuse_build:
+  python_reuse_build:
     runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
