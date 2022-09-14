@@ -65,7 +65,7 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: yarn.lock
       - run: yarn --frozen-lockfile
-      - run: yarn build
+      - run: yarn build:${{ inputs.buildStage }}
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
