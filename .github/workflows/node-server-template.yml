@@ -33,9 +33,6 @@ on:
 jobs:
   node_build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ inputs.workDir }}
     strategy:
       matrix:
         node-version: [16.x]
@@ -68,6 +65,7 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: ${{ inputs.workDir }}/yarn.lock
       - run: yarn --frozen-lockfile
+        working-directory: ${{ inputs.workDir }}
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
