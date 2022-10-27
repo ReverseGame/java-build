@@ -66,7 +66,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'yarn'
-          cache-dependency-path: yarn.lock
+          cache-dependency-path: ${{ inputs.workDir }}/yarn.lock
       - run: yarn --frozen-lockfile
       - name: Login to DockerHub
         uses: docker/login-action@v2
