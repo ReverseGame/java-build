@@ -33,6 +33,9 @@ on:
 jobs:
   node_build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.workDir }}
     strategy:
       matrix:
         node-version: [16.x]
@@ -75,14 +78,14 @@ jobs:
         uses: docker/build-push-action@v3.1.1
         with:
           push: true
-          context: .
+          context: ${{ inputs.workDir }}
           file: Dockerfile-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
       - name: deploy to fellas cluster
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./k8s-${{ inputs.buildStage }}.yaml || true
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: steebchen/kubectl@v2.0.0
         with:
