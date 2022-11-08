@@ -72,16 +72,16 @@ jobs:
           context: ${{ inputs.workDir }}
           file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
-      - name: deploy to fellas cluster
-        uses: steebchen/kubectl@v2.0.0
+      - uses: actions-hub/kubectl@master
+        env:
+          KUBE_CONFIG: ${{ secrets.kubeConfig }}
         with:
-          config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
-      - name: apply
-        uses: steebchen/kubectl@v2.0.0
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
+      - uses: actions-hub/kubectl@master
+        env:
+          KUBE_CONFIG: ${{ secrets.kubeConfig }}
         with:
-          config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
