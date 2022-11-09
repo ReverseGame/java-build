@@ -132,16 +132,16 @@ jobs:
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
-      - uses: ReverseGame/kubectl@master
-        env:
-          KUBE_CONFIG: ${{ secrets.kubeConfig }}
+      - name: deploy to fellas cluster
+        uses: znl1087/kubectl@master
         with:
-          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
-      - uses: ReverseGame/kubectl@master
-        env:
-          KUBE_CONFIG: ${{ secrets.kubeConfig }}
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
+      - name: apply
+        uses: znl1087/kubectl@master
         with:
-          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
