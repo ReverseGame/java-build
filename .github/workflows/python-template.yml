@@ -122,12 +122,12 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
       - name: deploy to fellas cluster
-        uses: steebchen/kubectl@v2.0.0
+        uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
       - name: apply
-        uses: steebchen/kubectl@v2.0.0
+        uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
