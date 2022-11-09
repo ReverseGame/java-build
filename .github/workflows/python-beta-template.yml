@@ -74,16 +74,6 @@ jobs:
           context: ${{ inputs.workDir }}
           file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
-      - uses: ReverseGame/kubectl@master
-        env:
-          KUBE_CONFIG: ${{ secrets.kubeConfig }}
-        with:
-          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
-      - uses: ReverseGame/kubectl@master
-        env:
-          KUBE_CONFIG: ${{ secrets.kubeConfig }}
-        with:
-          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
