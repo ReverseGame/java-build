@@ -33,7 +33,7 @@ on:
 
 jobs:
   python_build:
-    runs-on: ubuntu-lastest
+    runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
@@ -108,6 +108,7 @@ jobs:
                   - tag: text
                     text: ${{ env.tag }}
   k8s_deploy:
+    needs: python_build
     runs-on: self-hosted
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
