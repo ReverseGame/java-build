@@ -96,6 +96,11 @@ jobs:
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./k8s-${{ inputs.buildStage }}.yaml || true
+      - name: Tailscale
+        if: ${{ inputs.buildStage == 'beta' }}
+        uses: tailscale/github-action@v1
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
       - name: apply
         uses: steebchen/kubectl@v2.0.0
         with:
