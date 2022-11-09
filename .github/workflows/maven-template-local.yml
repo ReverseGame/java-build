@@ -100,6 +100,7 @@ jobs:
             JAR_FILE=${{ steps.artifactId.outputs.artifactId }}-${{ steps.project.outputs.version }}-exec.jar
             PROFILE=${{ inputs.buildStage }}
   k8s_deploy:
+    needs: java_reuse_build
     runs-on: self-hosted
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
