@@ -72,12 +72,12 @@ jobs:
           context: ${{ inputs.workDir }}
           file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
-      - uses: actions-hub/kubectl@master
+      - uses: ReverseGame/kubectl@master
         env:
           KUBE_CONFIG: ${{ secrets.kubeConfig }}
         with:
           args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
-      - uses: actions-hub/kubectl@master
+      - uses: ReverseGame/kubectl@master
         env:
           KUBE_CONFIG: ${{ secrets.kubeConfig }}
         with:
