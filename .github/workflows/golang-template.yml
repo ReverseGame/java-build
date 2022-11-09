@@ -73,11 +73,12 @@ jobs:
           context: ${{ inputs.workDir }}
           file: ${{ inputs.workDir }}/Dockerfile
           tags: ${{ env.tag }}
-      - name: Tailscale
-        if: ${{ inputs.buildStage == 'beta' }}
-        uses: tailscale/github-action@v1
+      - name: Setup Tailscale
+        id: tailscale
+        uses: tailscale/github-action@main
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: 1.24.2
       - name: deploy to fellas cluster
         uses: steebchen/kubectl@v2.0.0
         with:
