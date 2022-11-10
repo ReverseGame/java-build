@@ -112,9 +112,8 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   deploy_local:
     runs-on: self-hosted
-    strategy:
-      matrix:
-        node-version: [ 16.x ]
+    if: inputs.buildStage == 'beta'
+    needs: node_build
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
@@ -168,9 +167,8 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   deploy_product:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [ 16.x ]
+    if: inputs.buildStage == 'product'
+    needs: node_build
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
