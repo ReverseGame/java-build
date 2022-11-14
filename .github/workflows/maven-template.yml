@@ -76,7 +76,7 @@ jobs:
           repositories: '[{ "id": "${{ secrets.mavenId }}", "url": "${{ secrets.mavenUrl }}" }]'
           servers: '[{ "id": "${{ secrets.mavenId }}", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
       - name: Build with Maven
-        run: mvn --file ${{ inputs.workDir }}/pom.xml -Dmaven.test.skip=true clean package
+        run: mvn --file ${{ inputs.workDir }}/pom.xml -Dmaven.test.skip=true clean package -U
       - name: Extract Maven project version
         run: echo ::set-output name=version::$(mvn --file ${{ inputs.workDir }}/pom.xml -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
         id: project
