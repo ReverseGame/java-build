@@ -76,8 +76,8 @@ jobs:
         uses: docker/build-push-action@v3.1.1
         with:
           push: true
-          context: .
-          file: Dockerfile-${{ inputs.buildStage }}
+          context: ${{ inputs.workDir }}
+          file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
       - name: post success message
         if: always()
@@ -135,7 +135,7 @@ jobs:
         uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./k8s-${{ inputs.buildStage }}.yaml || true
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: znl1087/kubectl@master
         with:
@@ -197,7 +197,7 @@ jobs:
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./k8s-${{ inputs.buildStage }}.yaml || true
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: steebchen/kubectl@v2.0.0
         with:
