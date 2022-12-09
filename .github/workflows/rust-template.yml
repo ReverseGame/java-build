@@ -106,7 +106,7 @@ jobs:
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
-      - name: post messasge
+      - name: post message
         uses: foxundermoon/feishu-action@v2
         with:
           url: ${{ secrets.webhookFeishu }}
@@ -114,7 +114,7 @@ jobs:
           content: |
             post:
               zh_cn:
-                title: ${{ inputs.projectName }} 开始构建
+                title: ${{ inputs.projectName }} 开始部署
                 content:
                 - - tag: text
                     un_escape: true
