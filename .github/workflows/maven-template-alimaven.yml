@@ -69,6 +69,7 @@ jobs:
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v20
         with:
+          mirrors: '[{ "id": "mirror", "name": "mirror", "url": "http://repo.maven.apache.org/maven2/", "mirrorOf": "central,jcenter,!rdc-releases,!rdc-snapshots" }]'
           repositories: '[{ "id": "central", "name": "Central Repository", "url": "http://repo.maven.apache.org/maven2/", "releases": { "enabled": true }, "snapshots": { "enabled": false } }, { "id": "snapshots", "name": "Central Repository Snapshots", "url": "http://repo.maven.apache.org/maven2/", "releases": { "enabled": false }, "snapshots": { "enabled": true } }, { "id": "rdc-releases", "name": "rdc-releases", "url": "https://packages.aliyun.com/maven/repository/2319145-release-Np0nUm/", "releases": { "enabled": true }, "snapshots": { "enabled": false } }, { "id": "rdc-snapshots", "name": "rdc-snapshots", "url": "https://packages.aliyun.com/maven/repository/2319145-snapshot-uZ6IXx/", "releases": { "enabled": false }, "snapshots": { "enabled": true } }]'
           servers: '[{ "id": "rdc-releases", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }, { "id": "rdc-snapshots", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
       - name: Build with Maven
