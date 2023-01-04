@@ -85,10 +85,10 @@ jobs:
                 "name": "Central Repository",
                 "url": "https://maven.aliyun.com/nexus/content/groups/public",
                 "releases": {
-                  "enabled": true,
+                  "enabled": true
                 },
                 "snapshots": {
-                  "enabled": false,
+                  "enabled": false
                 }
               },
               {
@@ -96,10 +96,10 @@ jobs:
                 "name": "Central Repository Snapshots",
                 "url": "https://maven.aliyun.com/nexus/content/groups/public",
                 "releases": {
-                  "enabled": false,
+                  "enabled": false
                 },
                 "snapshots": {
-                  "enabled": true,
+                  "enabled": true
                 }
               },
               {
@@ -107,10 +107,10 @@ jobs:
                 "name": "rdc-releases",
                 "url": "https://packages.aliyun.com/maven/repository/2319145-release-Np0nUm/",
                 "releases": {
-                  "enabled": true,
+                  "enabled": true
                 },
                 "snapshots": {
-                  "enabled": false,
+                  "enabled": false
                 }
               },
               {
@@ -118,10 +118,10 @@ jobs:
                 "name": "rdc-snapshots",
                 "url": "https://packages.aliyun.com/maven/repository/2319145-snapshot-uZ6IXx/",
                 "releases": {
-                  "enabled": false,
+                  "enabled": false
                 },
                 "snapshots": {
-                  "enabled": true,
+                  "enabled": true
                 }
               }
             ]
