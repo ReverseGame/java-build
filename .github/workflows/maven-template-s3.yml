@@ -15,6 +15,10 @@ on:
       projectPrefix:
         required: true
         type: string
+      oldCluster:
+        required: false
+        type: boolean
+        default: 'false'
     secrets:
       webhookFeishu:
         required: true
@@ -120,7 +124,7 @@ jobs:
                   - tag: text
                     text: ${{ env.tag }}
   deploy_remote_beta:
-    if: inputs.kubeConfig== ${{ secrets.KUBE_BETA }}
+    if: inputs.oldCluster
     needs: java_reuse_build
     runs-on: ubuntu-latest
     env:
