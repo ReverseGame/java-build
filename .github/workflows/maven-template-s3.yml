@@ -119,6 +119,66 @@ jobs:
                     text: '镜像tag: '
                   - tag: text
                     text: ${{ env.tag }}
+  deploy_remote_beta:
+    if: inputs.kubeConfig== ${{ secrets.KUBE_BETA }}
+    needs: java_reuse_build
+    runs-on: ubuntu-latest
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始部署
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@v3
+      - name: deploy to fellas cluster
+        uses: steebchen/kubectl@v2.0.0
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
+      - name: apply
+        uses: steebchen/kubectl@v2.0.0
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
+
   deploy_local:
     if: inputs.buildStage == 'beta'
     needs: java_reuse_build
