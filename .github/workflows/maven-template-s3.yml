@@ -18,7 +18,7 @@ on:
       oldCluster:
         required: false
         type: boolean
-        default: 'false'
+        default: false
     secrets:
       webhookFeishu:
         required: true
