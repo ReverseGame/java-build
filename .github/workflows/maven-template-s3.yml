@@ -184,7 +184,7 @@ jobs:
                     text: ${{ env.tag }}
 
   deploy_local:
-    if: inputs.buildStage == 'beta'
+    if: inputs.buildStage == 'beta' &&!inputs.oldCluster
     needs: java_reuse_build
     runs-on: self-hosted
     env:
@@ -243,7 +243,7 @@ jobs:
                   - tag: text
                     text: ${{ env.tag }}
   deploy_product:
-    if: inputs.buildStage == 'product'
+    if: inputs.buildStage == 'product' 
     needs: java_reuse_build
     runs-on: ubuntu-latest
     env:
