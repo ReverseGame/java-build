@@ -88,7 +88,7 @@ jobs:
         with:
           push: true
           context: ${{ inputs.workDir }}
-          file: ${{ inputs.workDir }}/${{ input.dockerDir }}Dockerfile
+          file: ${{ inputs.workDir }}/${{ inputs.dockerDir }}Dockerfile
           tags: ${{ env.tag }}
       - name: post success message
         if: always()
