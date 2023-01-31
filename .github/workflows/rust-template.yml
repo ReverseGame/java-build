@@ -91,6 +91,16 @@ jobs:
           context: ${{ inputs.workDir }}
           file: ${{ inputs.workDir }}/${{ inputs.dockerDir }}Dockerfile
           tags: ${{ env.tag }}
+      - name: Save cache 
+        id: cache-save
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            target/    
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
