@@ -12,6 +12,10 @@ on:
       workDir:
         required: true
         type: string
+      dockerDir:
+        required: false
+        type: string
+        default: ''
       projectPrefix:
         required: true
         type: string
@@ -84,7 +88,7 @@ jobs:
         with:
           push: true
           context: ${{ inputs.workDir }}
-          file: ${{ inputs.workDir }}/Dockerfile
+          file: ${{ inputs.workDir }}/${{ input.dockerDir }}Dockerfile
           tags: ${{ env.tag }}
       - name: post success message
         if: always()
