@@ -65,8 +65,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v1
+      - uses: arduino/setup-protoc@v1
       - name: Set up cache
         uses: actions/cache@v3
         continue-on-error: true
@@ -145,7 +144,7 @@ jobs:
         uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./k8s-${{ inputs.buildStage }}.yaml || true
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}k8s-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: znl1087/kubectl@master
         with:
