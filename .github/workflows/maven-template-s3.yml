@@ -73,9 +73,8 @@ jobs:
       - name: maven-settings-xml-action
         uses: whelk-io/maven-settings-xml-action@v20
         with:
-          mirrors: '[{ "id": "nexus", "mirrorOf": "!maven-s3-snapshots-repo,!maven-s3-releases-repo", "name": "nexus", "url": "https://nexus.sadnull.club/repository/maven-public/" }]'
-          repositories: '[{ "id": "nexus", "name": "nexus", "url": "https://nexus.sadnull.club/repository/maven-public/", "releases": { "enabled": true }, "snapshots": { "enabled": true } }, { "id": "maven-s3-snapshots-repo", "name": "maven-s3-snapshots-repo", "url": "s3://s3-maven/snapshots/", "releases": { "enabled": false }, "snapshots": { "enabled": true } }, { "id": "maven-s3-releases-repo", "name": "maven-s3-releases-repo", "url": "s3://s3-maven/releases/", "releases": { "enabled": true }, "snapshots": { "enabled": false } }]'
-          servers: '[{ "id": "nexus", "username": "znl1087", "password": "loveCJN12458" }, { "id": "maven-s3-snapshots-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }, { "id": "maven-s3-releases-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
+          repositories: '[{ "id": "maven-s3-snapshots-repo", "name": "maven-s3-snapshots-repo", "url": "s3://s3-maven/snapshots/", "releases": { "enabled": false }, "snapshots": { "enabled": true } }, { "id": "maven-s3-releases-repo", "name": "maven-s3-releases-repo", "url": "s3://s3-maven/releases/", "releases": { "enabled": true }, "snapshots": { "enabled": false } }]'
+          servers: '[{ "id": "maven-s3-snapshots-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }, { "id": "maven-s3-releases-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
       - name: Build with Maven
         run: mvn --file ${{ inputs.workDir }}/pom.xml -Dmaven.test.skip=true clean package -U
       - name: Extract Maven project version
