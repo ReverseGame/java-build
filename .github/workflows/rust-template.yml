@@ -62,13 +62,14 @@ jobs:
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
           veion: '3.x'
+      - name: Install Rust
+        run: rustup toolchain install stable --component llvm-tools-preview
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
       - name: Set up cache
         uses: actions/cache@v3
         continue-on-error: true
