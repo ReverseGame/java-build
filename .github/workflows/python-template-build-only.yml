@@ -1,0 +1,97 @@
+name: Python CI
+
+on:
+  workflow_call:
+    inputs:
+      projectName:
+        required: true
+        type: string
+      buildStage:
+        required: true
+        type: string
+      workDir:
+        required: true
+        type: string
+      projectPrefix:
+        required: true
+        type: string
+    secrets:
+      webhookFeishu:
+        required: true
+      dockerUrl:
+        required: true
+      dockerRepo:
+        required: true
+      dockerUsername:
+        required: true
+      dockerPassword:
+        required: true
+      kubeConfig:
+        required: true
+
+
+
+jobs:
+  python_reuse_build:
+    runs-on: ubuntu-latest
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始构建
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.7'
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.dockerUrl }}
+          username: ${{ secrets.dockerUsername }}
+          password: ${{ secrets.dockerPassword }}
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v3.1.1
+        with:
+          push: true
+          context: ${{ inputs.workDir }}
+          file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
+          tags: ${{ env.tag }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
