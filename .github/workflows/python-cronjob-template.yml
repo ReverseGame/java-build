@@ -19,6 +19,12 @@ on:
         required: false
         type: boolean
         default: false
+      awsRegion:
+        required: false
+        type: string
+      clusterName:
+        required: false
+        type: string
     secrets:
       webhookFeishu:
         required: true
@@ -36,10 +42,7 @@ on:
         required: false
       awsSecretKey:
         required: false
-      awsRegion:
-        required: false
-      clusterName:
-        required: false
+
 
 
 jobs:
@@ -230,7 +233,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
-      aws_region: ${{ secrets.awsRegion }}
+      aws_region: ${{ inputs.awsRegion }}
     steps:
       - name: post message
         uses: foxundermoon/feishu-action@v2
@@ -259,12 +262,12 @@ jobs:
       - name: create 
         uses: ianbelcher/eks-kubectl-action@master
         with:
-          cluster_name: ${{ secrets.clusterName }}
+          cluster_name: ${{ inputs.clusterName }}
           args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: ianbelcher/eks-kubectl-action@master
         with:
-          cluster_name: ${{ secrets.clusterName }}
+          cluster_name: ${{ inputs.clusterName }}
           args: set image cronjob/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }} --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
       - name: post success message
         if: always()
