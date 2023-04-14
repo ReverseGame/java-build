@@ -335,11 +335,6 @@ jobs:
         with:
           cluster_name: ${{ inputs.clusterName }}
           args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml 
-      - name: apply
-        uses: ianbelcher/eks-kubectl-action@master
-        with:
-          cluster_name: ${{ inputs.clusterName }}
-          args: set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }} --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
