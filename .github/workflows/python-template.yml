@@ -293,7 +293,7 @@ jobs:
                   - tag: text
                     text: ${{ env.tag }}
 
-  deploy_eks:
+  deploy_eks_beta:
     if: inputs.buildStage == 'beta' && inputs.eks
     needs: python_reuse_build
     runs-on: ubuntu-latest
