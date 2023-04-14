@@ -329,12 +329,17 @@ jobs:
       - uses: actions/checkout@v3
       - name: modify
         run: |
-          cat ${{env.k8sfile}} | grep "image: " | awk '{print $2}' | xargs -I{} sed -i "" "s|{}|${{ env.tag }}|g" ${{env.k8sfile}}
+          cat ${{env.k8sfile}} | grep "image: " | awk '{print $2}' | xargs -I{} sed -i "s|{}|${{ env.tag }}|g" ${{env.k8sfile}}
       - name: create 
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}
           args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml 
+      - name: apply
+        uses: ianbelcher/eks-kubectl-action@master
+        with:
+          cluster_name: ${{ inputs.clusterName }}
+          args: set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }} --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
