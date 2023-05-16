@@ -1,0 +1,130 @@
+name: Rust CI
+
+on:
+  workflow_call:
+    inputs:
+      projectName:
+        required: true
+        type: string
+      buildStage:
+        required: true
+        type: string
+      workDir:
+        required: true
+        type: string
+      dockerDir:
+        required: false
+        type: string
+        default: ''
+      projectPrefix:
+        required: true
+        type: string
+    secrets:
+      webhookFeishu:
+        required: true
+      dockerUrl:
+        required: true
+      dockerRepo:
+        required: true
+      dockerUsername:
+        required: true
+      dockerPassword:
+        required: true
+      kubeConfig:
+        required: true
+
+jobs:
+  build-rust:
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+
+    steps:
+      - name: post messasge
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始构建
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@v3
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          version: '3.x'
+      - name: Install Rust
+        run: rustup toolchain install stable --component llvm-tools-preview
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Set up cache
+        uses: actions/cache@v3
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.dockerUrl }}
+          username: ${{ secrets.dockerUsername }}
+          password: ${{ secrets.dockerPassword }}
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v3.1.1
+        with:
+          push: true
+          context: ${{ inputs.workDir }}
+          file: ${{ inputs.workDir }}/${{ inputs.dockerDir }}Dockerfile
+          tags: ${{ env.tag }}
+      - name: Save cache 
+        id: cache-save
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            target/    
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
