@@ -226,13 +226,14 @@ jobs:
                     text: '镜像tag: '
                   - tag: text
                     text: ${{ env.tag }}
-  deploy_eks:
+  deploy_eks_product:
     if: inputs.buildStage == 'product' && inputs.eks
     needs: python_reuse_build
     runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
       aws_region: ${{ inputs.awsRegion }}
+      k8sfile: ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml
     steps:
       - name: post message
         uses: foxundermoon/feishu-action@v2
@@ -259,16 +260,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.awsSecretKey }}
           aws-region: ${{ env.aws_region }}
       - uses: actions/checkout@v3
-      - name: create 
+      - name: modify
+        run: |
+          cat ${{env.k8sfile}} | grep "image: " | awk '{print $2}' | xargs -I{} sed -i "s|{}|${{ env.tag }}|g" ${{env.k8sfile}}
+      - name: create
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}
-          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml 
-      - name: apply
-        uses: ianbelcher/eks-kubectl-action@master
-        with:
-          cluster_name: ${{ inputs.clusterName }}
-          args: set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }} --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
