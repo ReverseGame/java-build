@@ -37,7 +37,7 @@ jobs:
   build-rust:
     strategy:
       matrix:
-        platform: [ubuntu-latest]
+        platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
@@ -93,9 +93,9 @@ jobs:
         with:
           push: true
           context: ${{ inputs.workDir }}
-          file: ${{ inputs.workDir }}/${{ inputs.dockerDir }}Dockerfile
+          file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
-      - name: Save cache 
+      - name: Save cache
         id: cache-save
         uses: actions/cache/save@v3
         with:
