@@ -72,10 +72,10 @@ jobs:
 
       - name: Build Product Release
         if: inputs.buildStage == 'product'
-        run: set RUSTFLAGS=--cfg env="product"
+        run: $env:RUSTFLAGS='--cfg env="product"'
       - name: Build Beta Release
         if: inputs.buildStage == 'beta'
-        run: set RUSTFLAGS=--cfg env="beta"
+        run: $env:RUSTFLAGS='--cfg env="beta"'
       - name: Build Release
         run: cargo build --release
 
