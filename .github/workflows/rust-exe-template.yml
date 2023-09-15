@@ -6,6 +6,9 @@ on:
       projectName:
         required: true
         type: string
+      packageName:
+        required: true
+        type: string 
       buildStage:
         required: true
         type: string
@@ -81,15 +84,15 @@ jobs:
         if: inputs.buildStage == 'product'
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ inputs.projectName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
-          path: target/release/${{ inputs.projectName }}.exe
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
+          path: target/release/${{ inputs.packageName }}.exe
 
       - name: Upload artifact
         if: inputs.buildStage != 'product'
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ inputs.projectName }}-${{ inputs.buildStage }}.exe
-          path: target/release/${{ inputs.projectName }}.exe
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}.exe
+          path: target/release/${{ inputs.packageName }}.exe
 
       - name: post success message
         if: always()
@@ -141,14 +144,14 @@ jobs:
         if: inputs.buildStage == 'product'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.projectName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
           path: ./
 
       - name: Download artifact
         if: inputs.buildStage != 'product'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.projectName }}-${{ inputs.buildStage }}.exe
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}.exe
           path: ./
       - name: Display structure of downloaded files
         run: ls -R
@@ -158,8 +161,8 @@ jobs:
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           command: cp
-          source: ./cli.exe
-          destination: s3://xbot/windows/release/${{ inputs.projectName }}-${{  github.ref_name }}.exe
+          source: ./${{ inputs.packageName }}.exe
+          destination: s3://xbot/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
@@ -169,8 +172,8 @@ jobs:
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           command: cp
-          source: ./cli.exe
-          destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.projectName }}.exe
+          source: ./${{ inputs.packageName }}.exe
+          destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
