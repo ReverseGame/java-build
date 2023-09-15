@@ -142,6 +142,7 @@ jobs:
       matrix:
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
+    needs: build-rust
 
     steps:
       - name: post messasge
