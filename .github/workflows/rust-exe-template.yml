@@ -8,7 +8,7 @@ on:
         type: string
       packageName:
         required: true
-        type: string 
+        type: string
       buildStage:
         required: true
         type: string
@@ -72,12 +72,11 @@ jobs:
 
       - name: Build Product Release
         if: inputs.buildStage == 'product'
-        run: set RUSTFLAGS='--cfg env="product"'; cargo build --release
+        run: set RUSTFLAGS=--cfg env="product"
       - name: Build Beta Release
         if: inputs.buildStage == 'beta'
-        run: set RUSTFLAGS='--cfg env="beta"'; cargo build --release
-      - name: Build Dev Release
-        if: inputs.buildStage != 'product' && inputs.buildStage != 'beta'
+        run: set RUSTFLAGS=--cfg env="beta"
+      - name: Build Release
         run: cargo build --release
 
       - name: Upload artifact product
