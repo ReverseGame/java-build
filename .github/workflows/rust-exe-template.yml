@@ -110,11 +110,6 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-                - - tag: text
-                    text: '镜像tag: '
-                  - tag: text
-                    text: ${{ env.tag }}
-
   upload:
     strategy:
       matrix:
