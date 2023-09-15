@@ -1,0 +1,124 @@
+name: Rust CI
+
+on:
+  workflow_call:
+    inputs:
+      projectName:
+        required: true
+        type: string
+      buildStage:
+        required: true
+        type: string
+        default: ""
+      awsRegion:
+        required: true
+        type: string
+    secrets:
+      webhookFeishu:
+        required: true
+      awsAccessKey:
+        required: false
+      awsSecretKey:
+        required: false
+
+jobs:
+  build-rust:
+    strategy:
+      matrix:
+        platform: [ windows-latest ]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: post messasge
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始构建
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Set up cache
+        uses: actions/cache@v3
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ./target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build Product Release
+        if: inputs.buildStage == 'product'
+        run: RUSTFLAGS='--cfg env="product"' cargo build --release
+      - name: Build Beta Release
+        if: inputs.buildStage == 'beta'
+        run: RUSTFLAGS='--cfg env="beta"' cargo build --release
+      - name: Build Dev Release
+        if: inputs.buildStage != 'product' && inputs.buildStage != 'beta'
+        run: cargo build --release
+
+      - name: Upload to S3
+        if: inputs.buildStage == 'product'
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: cp
+          source: target/release/${{ inputs.projectName }}.exe
+          destination: s3://xbot/windows/release/${{ inputs.projectName }}-${{  github.ref_name }}.exe
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+
+      - name: Upload to S3
+        if: inputs.buildStage != 'product'
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: cp
+          source: target/release/${{ inputs.projectName }}.exe
+          destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.projectName }}.exe
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
