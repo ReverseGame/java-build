@@ -64,8 +64,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ./target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Build Product Release
         if: inputs.buildStage == 'product'
@@ -77,27 +77,41 @@ jobs:
         if: inputs.buildStage != 'product' && inputs.buildStage != 'beta'
         run: cargo build --release
 
-      - name: Upload to S3
+      - name: Upload artifact product
         if: inputs.buildStage == 'product'
-        uses: keithweaver/aws-s3-github-action@v1.0.0
+        uses: actions/upload-artifact@v3
         with:
-          command: cp
-          source: target/release/${{ inputs.projectName }}.exe
-          destination: s3://xbot/windows/release/${{ inputs.projectName }}-${{  github.ref_name }}.exe
-          aws_access_key_id: ${{ secrets.awsAccessKey }}
-          aws_secret_access_key: ${{ secrets.awsSecretKey }}
-          aws_region: ${{ inputs.awsRegion }}
+          name: ${{ inputs.projectName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
+          path: target/release/${{ inputs.projectName }}.exe
 
-      - name: Upload to S3
+      - name: Upload artifact
         if: inputs.buildStage != 'product'
-        uses: keithweaver/aws-s3-github-action@v1.0.0
+        uses: actions/upload-artifact@v3
         with:
-          command: cp
-          source: target/release/${{ inputs.projectName }}.exe
-          destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.projectName }}.exe
-          aws_access_key_id: ${{ secrets.awsAccessKey }}
-          aws_secret_access_key: ${{ secrets.awsSecretKey }}
-          aws_region: ${{ inputs.awsRegion }}
+          name: ${{ inputs.projectName }}-${{ inputs.buildStage }}.exe
+          path: target/release/${{ inputs.projectName }}.exe
+
+      # - name: Upload to S3
+      #   if: inputs.buildStage == 'product'
+      #   uses: keithweaver/aws-s3-github-action@v1.0.0
+      #   with:
+      #     command: cp
+      #     source: target/release/${{ inputs.projectName }}.exe
+      #     destination: s3://xbot/windows/release/${{ inputs.projectName }}-${{  github.ref_name }}.exe
+      #     aws_access_key_id: ${{ secrets.awsAccessKey }}
+      #     aws_secret_access_key: ${{ secrets.awsSecretKey }}
+      #     aws_region: ${{ inputs.awsRegion }}
+
+      # - name: Upload to S3
+      #   if: inputs.buildStage != 'product'
+      #   uses: keithweaver/aws-s3-github-action@v1.0.0
+      #   with:
+      #     command: cp
+      #     source: target/release/${{ inputs.projectName }}.exe
+      #     destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.projectName }}.exe
+      #     aws_access_key_id: ${{ secrets.awsAccessKey }}
+      #     aws_secret_access_key: ${{ secrets.awsSecretKey }}
+      #     aws_region: ${{ inputs.awsRegion }}
 
       - name: post success message
         if: always()
