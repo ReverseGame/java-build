@@ -136,3 +136,83 @@ jobs:
                     text: '镜像tag: '
                   - tag: text
                     text: ${{ env.tag }}
+
+  upload:
+    strategy:
+      matrix:
+        platform: [ ubuntu-latest ]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: post messasge
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始上传
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Download artifact product
+        if: inputs.buildStage == 'product'
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.projectName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
+
+      - name: Download artifact
+        if: inputs.buildStage != 'product'
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.projectName }}-${{ inputs.buildStage }}.exe
+
+      - name: Upload to S3
+        if: inputs.buildStage == 'product'
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: cp
+          source: ${{ inputs.projectName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
+          destination: s3://xbot/windows/release/${{ inputs.projectName }}-${{  github.ref_name }}.exe
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+
+      - name: Upload to S3
+        if: inputs.buildStage != 'product'
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: cp
+          source: ${{ inputs.projectName }}-${{ inputs.buildStage }}.exe
+          destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.projectName }}.exe
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 上传结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
