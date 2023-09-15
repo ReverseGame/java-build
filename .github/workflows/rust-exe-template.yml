@@ -77,14 +77,14 @@ jobs:
         if: inputs.buildStage == 'product'
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
           path: target/release/${{ inputs.packageName }}.exe
 
       - name: Upload artifact
         if: inputs.buildStage != 'product'
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}.exe
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
           path: target/release/${{ inputs.packageName }}.exe
 
       - name: post success message
@@ -137,14 +137,14 @@ jobs:
         if: inputs.buildStage == 'product'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
           path: ./
 
       - name: Download artifact
         if: inputs.buildStage != 'product'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}.exe
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
           path: ./
       - name: Display structure of downloaded files
         run: ls -R
