@@ -91,28 +91,6 @@ jobs:
           name: ${{ inputs.projectName }}-${{ inputs.buildStage }}.exe
           path: target/release/${{ inputs.projectName }}.exe
 
-      # - name: Upload to S3
-      #   if: inputs.buildStage == 'product'
-      #   uses: keithweaver/aws-s3-github-action@v1.0.0
-      #   with:
-      #     command: cp
-      #     source: target/release/${{ inputs.projectName }}.exe
-      #     destination: s3://xbot/windows/release/${{ inputs.projectName }}-${{  github.ref_name }}.exe
-      #     aws_access_key_id: ${{ secrets.awsAccessKey }}
-      #     aws_secret_access_key: ${{ secrets.awsSecretKey }}
-      #     aws_region: ${{ inputs.awsRegion }}
-
-      # - name: Upload to S3
-      #   if: inputs.buildStage != 'product'
-      #   uses: keithweaver/aws-s3-github-action@v1.0.0
-      #   with:
-      #     command: cp
-      #     source: target/release/${{ inputs.projectName }}.exe
-      #     destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.projectName }}.exe
-      #     aws_access_key_id: ${{ secrets.awsAccessKey }}
-      #     aws_secret_access_key: ${{ secrets.awsSecretKey }}
-      #     aws_region: ${{ inputs.awsRegion }}
-
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
@@ -185,7 +163,7 @@ jobs:
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           command: cp
-          source: ./${{ inputs.projectName }}-${{ inputs.buildStage }}-${{ github.ref_name }}.exe
+          source: ./cli.exe
           destination: s3://xbot/windows/release/${{ inputs.projectName }}-${{  github.ref_name }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
@@ -196,7 +174,7 @@ jobs:
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           command: cp
-          source: ./${{ inputs.projectName }}-${{ inputs.buildStage }}.exe
+          source: ./cli.exe
           destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.projectName }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
