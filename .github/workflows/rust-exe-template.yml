@@ -64,12 +64,12 @@ jobs:
         continue-on-error: true
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
             ./target
-          key: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-
 
       - name: Build Product Release
         if: inputs.buildStage == 'product'
