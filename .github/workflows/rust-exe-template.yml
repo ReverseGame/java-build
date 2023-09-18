@@ -23,9 +23,6 @@ on:
         required: false
       awsSecretKey:
         required: false
-    outputs:
-      os:
-        value: ${{ jobs.build-rust.outputs.os }}
 
 jobs:
   build-rust:
