@@ -210,7 +210,7 @@ jobs:
                 - - tag: text
                     text: '下载链接: '
                   - tag: text
-                    text: https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe                    href: 
+                    text: https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
 
       - name: post success message
         if: inputs.buildStage == 'product'
