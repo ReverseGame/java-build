@@ -162,10 +162,11 @@ jobs:
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
-          destination: s3://xbot/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+          destination: s3://xbot/${{ matrix.platform }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read
 
       - name: Upload to S3
         if: inputs.buildStage != 'product'
@@ -173,13 +174,14 @@ jobs:
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
-          destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
+          destination: s3://xbot/${{ matrix.platform }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read
 
       - name: post success message
-        if: always()
+        if: inputs.buildStage != 'product'
         uses: foxundermoon/feishu-action@v2
         with:
           url: ${{ secrets.webhookFeishu }}
@@ -197,3 +199,33 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '下载链接: '
+                  - tag: a
+                    text: github action
+                    href: https://xbot.s3.amazonaws.com/${{ matrix.platform }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
+
+      - name: post success message
+        if: inputs.buildStage == 'product'
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 上传结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '下载链接: '
+                  - tag: a
+                    text: github action
+                    href: https://xbot.s3.amazonaws.com/${{ matrix.platform }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
