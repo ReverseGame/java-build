@@ -23,6 +23,9 @@ on:
         required: false
       awsSecretKey:
         required: false
+    outputs:
+      os:
+        value: ${{ jobs.build-rust.outputs.os }}
 
 jobs:
   build-rust:
@@ -30,6 +33,7 @@ jobs:
       matrix:
         platform: [ windows-latest ]
     runs-on: ${{ matrix.platform }}
+
 
     steps:
       - name: post messasge
@@ -113,6 +117,13 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - id: output
+        uses: ASzc/change-string-case-action@v5
+        with:
+          string: ${{ runner.os }}
+    outputs:
+      os: ${{ steps.output.outputs.lowercase }}
+  
   upload:
     strategy:
       matrix:
@@ -162,7 +173,7 @@ jobs:
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
-          destination: s3://xbot/${{ matrix.platform }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+          destination: s3://xbot/${{ jobs.build-rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
@@ -174,7 +185,7 @@ jobs:
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
-          destination: s3://xbot/${{ matrix.platform }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
+          destination: s3://xbot/${{ jobs.build-rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
@@ -201,9 +212,8 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
                 - - tag: text
                     text: '下载链接: '
-                  - tag: a
-                    text: github action
-                    href: https://xbot.s3.amazonaws.com/${{ matrix.platform }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
+                  - tag: text
+                    text: https://xbot.s3.amazonaws.com/${{ jobs.build-rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe                    href: 
 
       - name: post success message
         if: inputs.buildStage == 'product'
@@ -226,6 +236,5 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
                 - - tag: text
                     text: '下载链接: '
-                  - tag: a
-                    text: github action
-                    href: https://xbot.s3.amazonaws.com/${{ matrix.platform }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                  - tag: text
+                    text: https://xbot.s3.amazonaws.com/${{ jobs.build-rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
