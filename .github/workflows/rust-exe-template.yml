@@ -67,8 +67,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ./target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Build Product Release
         if: inputs.buildStage == 'product'
