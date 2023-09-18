@@ -23,9 +23,13 @@ on:
         required: false
       awsSecretKey:
         required: false
+    outputs:
+      os:
+        description: "running os"
+        value: ${{ jobs.build_rust.outputs.os }}
 
 jobs:
-  build-rust:
+  build_rust:
     strategy:
       matrix:
         platform: [ windows-latest ]
@@ -126,7 +130,7 @@ jobs:
       matrix:
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
-    needs: build-rust
+    needs: build_rust
 
     steps:
       - name: post messasge
@@ -170,7 +174,7 @@ jobs:
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
-          destination: s3://xbot/${{ jobs.build-rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+          destination: s3://xbot/${{ jobs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
@@ -182,7 +186,7 @@ jobs:
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
-          destination: s3://xbot/${{ jobs.build-rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
+          destination: s3://xbot/${{ jobs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
@@ -210,7 +214,7 @@ jobs:
                 - - tag: text
                     text: '下载链接: '
                   - tag: text
-                    text: https://xbot.s3.amazonaws.com/${{ jobs.build-rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe                    href: 
+                    text: https://xbot.s3.amazonaws.com/${{ jobs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe                    href: 
 
       - name: post success message
         if: inputs.buildStage == 'product'
@@ -234,4 +238,4 @@ jobs:
                 - - tag: text
                     text: '下载链接: '
                   - tag: text
-                    text: https://xbot.s3.amazonaws.com/${{ jobs.build-rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                    text: https://xbot.s3.amazonaws.com/${{ jobs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
