@@ -182,7 +182,7 @@ jobs:
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
-          destination: s3://xbot/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
+          destination: s3://xbot/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
@@ -210,7 +210,7 @@ jobs:
                 - - tag: text
                     text: '下载链接: '
                   - tag: text
-                    text: https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}.exe
+                    text: https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
 
       - name: post success message
         if: inputs.buildStage == 'product'
