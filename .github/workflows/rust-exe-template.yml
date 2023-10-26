@@ -59,7 +59,7 @@ jobs:
               id: version
               run: |
                 $version = (Select-String -Path Cargo.toml -Pattern 'version = "(.*)"' | ForEach-Object { $_.Matches.Groups[1].Value })
-                echo ::set-output name=version::$(version)
+                echo ::set-output name=version::$version
               shell: powershell
               
             - name: Rust setup
