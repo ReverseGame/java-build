@@ -127,7 +127,7 @@ jobs:
                   string: ${{ runner.os }}
         outputs:
             os: ${{ steps.output.outputs.lowercase }}
-            version: ${{ steps.version.outputs.app_version }}
+            version: ${{ steps.version.outputs.version }}
 
     upload:
         strategy:
