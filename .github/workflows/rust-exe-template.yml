@@ -55,6 +55,13 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v3
 
+            - name: get cargo version
+              id: version
+              run: |
+                $version = (Select-String -Path Cargo.toml -Pattern 'version = "(.*)"' | ForEach-Object { $_.Matches.Groups[1].Value })
+                echo ::set-output name=version::$(version)
+              shell: powershell
+              
             - name: Rust setup
               uses: dtolnay/rust-toolchain@stable
             - name: Install cargo-llvm-cov
@@ -71,7 +78,6 @@ jobs:
                       ./target
                   key: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-${{ hashFiles('**/Cargo.lock') }}
                   restore-keys: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-
-
             - name: Build Product Release
               if: inputs.buildStage == 'product'
               run: $env:RUSTFLAGS='--cfg env="product"';cargo build --release
@@ -119,11 +125,6 @@ jobs:
               uses: ASzc/change-string-case-action@v5
               with:
                   string: ${{ runner.os }}
-            - name: get cargo version
-              id: version
-              uses: dante-signal31/rust-app-version@v1.2.0
-              with:
-                  cargo_toml_folder: ./cli
         outputs:
             os: ${{ steps.output.outputs.lowercase }}
             version: ${{ steps.version.outputs.app_version }}
