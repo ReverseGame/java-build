@@ -23,8 +23,8 @@ on:
                 required: false
             awsSecretKey:
                 required: false
-            updateApi:
-                required: false
+            # updateApi:
+                # required: false
 
 jobs:
     build_rust:
@@ -202,23 +202,23 @@ jobs:
                   aws_region: ${{ inputs.awsRegion }}
                   flags: --acl public-read
 
-            - name: update version
-              if: inputs.buildStage != 'dev' && secrets.updateApi != ''
-              uses: fjogeleit/http-request-action@v1
-              with:
-                  url: ${{ secrets.updateApi }}/version/update
-                  method: "POST"
-                  customHeaders: '{"Content-Type": "application/json"}'
-                  data: '{"platform": "${{ needs.build_rust.outputs.os }}", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
+            # - name: update version
+            #   if: inputs.buildStage != 'dev' && inputs.buildStage != 'product'
+            #   uses: fjogeleit/http-request-action@v1
+            #   with:
+            #       url: ${{ secrets.updateApi }}/version/update
+            #       method: "POST"
+            #       customHeaders: '{"Content-Type": "application/json"}'
+            #       data: '{"platform": "${{ needs.build_rust.outputs.os }}", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
 
-            - name: update download
-              if: inputs.buildStage == 'product' && secrets.updateApi != ''
-              uses: fjogeleit/http-request-action@v1
-              with:
-                  url: ${{ secrets.updateApi }}/${{ needs.build_rust.outputs.os }}/update
-                  method: "POST"
-                  customHeaders: '{"Content-Type": "application/json"}'
-                  data: '{"link": "https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
+            # - name: update download
+            #   if: inputs.buildStage == 'product' 
+            #   uses: fjogeleit/http-request-action@v1
+            #   with:
+            #       url: ${{ secrets.updateApi }}/${{ needs.build_rust.outputs.os }}/update
+            #       method: "POST"
+            #       customHeaders: '{"Content-Type": "application/json"}'
+            #       data: '{"link": "https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
 
             - name: post success message
               if: inputs.buildStage != 'product'
