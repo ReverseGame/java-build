@@ -24,7 +24,8 @@ on:
             awsSecretKey:
                 required: false
             updateApi:
-                required: true
+                required: false
+                default: ""
 
 jobs:
     build_rust:
@@ -203,7 +204,7 @@ jobs:
                   flags: --acl public-read
 
             - name: update version
-              if: inputs.buildStage != 'dev'
+              if: inputs.buildStage != 'dev' && secrets.updateApi != ''
               uses: fjogeleit/http-request-action@v1
               with:
                   url: ${{ secrets.updateApi }}/version/update
@@ -212,7 +213,7 @@ jobs:
                   data: '{"platform": "${{ needs.build_rust.outputs.os }}", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
 
             - name: update download
-              if: inputs.buildStage == 'product'
+              if: inputs.buildStage == 'product' && secrets.updateApi != ''
               uses: fjogeleit/http-request-action@v1
               with:
                   url: ${{ secrets.updateApi }}/${{ needs.build_rust.outputs.os }}/update
