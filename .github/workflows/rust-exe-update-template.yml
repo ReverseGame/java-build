@@ -203,7 +203,7 @@ jobs:
                   flags: --acl public-read
 
             - name: update version
-              if: inputs.buildStage != 'dev' && inputs.buildStage != 'product'
+              if: inputs.buildStage != 'dev'
               uses: fjogeleit/http-request-action@v1
               with:
                   url: ${{ secrets.updateApi }}/version/update
