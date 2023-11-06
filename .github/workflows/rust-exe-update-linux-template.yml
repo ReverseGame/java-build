@@ -59,8 +59,8 @@ jobs:
             - name: get cargo version
               id: version
               run: |
-                $version = $(grep -m 1 -o 'version = ".*"' ./cli/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
-                echo "::set-output name=version::$($version)"
+                version = $(grep -m 1 -o 'version = ".*"' ./cli/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+                echo "::set-output name=version::$version"
               shell: bash
 
             - name: test output
