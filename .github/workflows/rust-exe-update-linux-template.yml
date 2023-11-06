@@ -86,13 +86,16 @@ jobs:
                   restore-keys: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-
             - name: Build Product Release
               if: inputs.buildStage == 'product'
-              run: RUSTFLAGS='--cfg env="product"' cargo build --release
+              run: RUSTFLAGS='--cfg env="product"' cargo build --release --target x86_64-pc-windows-gnu
             - name: Build Beta Release
               if: inputs.buildStage == 'beta'
-              run: RUSTFLAGS='--cfg env="beta"' cargo build --release
+              run: RUSTFLAGS='--cfg env="beta"' cargo build --release --target x86_64-pc-windows-gnu
             - name: Build Release
               if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
-              run: cargo build --release
+              run: cargo build --release --target x86_64-pc-windows-gnu
+
+            - name: list files
+              run: ls -R
 
             - name: Upload artifact product
               if: inputs.buildStage == 'product'
