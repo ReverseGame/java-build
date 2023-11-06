@@ -72,7 +72,10 @@ jobs:
 
             - name: Install cargo-llvm-cov
               uses: taiki-e/install-action@cargo-llvm-cov
-
+            - name: Set up MinGW
+              uses: egor-tensin/setup-mingw@v2
+              with:
+                platform: x64
             - name: Set up cache
               uses: actions/cache@v3
               continue-on-error: true
