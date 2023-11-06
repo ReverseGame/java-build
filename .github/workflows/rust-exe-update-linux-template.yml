@@ -224,7 +224,7 @@ jobs:
                   url: ${{ secrets.updateApi }}/windows/update
                   method: "POST"
                   customHeaders: '{"Content-Type": "application/json"}'
-                  data: '{"link": "https://xbot.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
+                  data: '{"link": "https://xbot.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe","platform": "windows", "env": "${{ inputs.buildStage }}"}'
 
             - name: post success message
               if: inputs.buildStage != 'product'
