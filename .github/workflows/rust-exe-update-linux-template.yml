@@ -1,0 +1,270 @@
+name: Rust CI
+
+on:
+    workflow_call:
+        inputs:
+            projectName:
+                required: true
+                type: string
+            packageName:
+                required: true
+                type: string
+            buildStage:
+                required: true
+                type: string
+                default: ""
+            awsRegion:
+                required: true
+                type: string
+        secrets:
+            webhookFeishu:
+                required: true
+            awsAccessKey:
+                required: false
+            awsSecretKey:
+                required: false
+            updateApi:
+                required: true
+
+jobs:
+    build_rust:
+        strategy:
+            matrix:
+                platform: [ubuntu-latest]
+        runs-on: ${{ matrix.platform }}
+
+        steps:
+            - name: post messasge
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 开始构建
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+
+            - name: get cargo version
+              id: version
+              run: |
+                $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
+                echo "::set-output name=version::$($version)"
+
+            - name: test output
+              run: |
+                echo "version = " ${{ steps.version.outputs.version }}
+                
+            - name: Rust setup
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                targets: x86_64-pc-windows-gnu
+
+            - name: Install cargo-llvm-cov
+              uses: taiki-e/install-action@cargo-llvm-cov
+
+            - name: Set up cache
+              uses: actions/cache@v3
+              continue-on-error: true
+              with:
+                  path: |
+                      ~/.cargo/bin
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      ./target
+                  key: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-${{ hashFiles('**/Cargo.lock') }}
+                  restore-keys: ${{ runner.os }}-cargo-${{ inputs.buildStage }}-
+            - name: Build Product Release
+              if: inputs.buildStage == 'product'
+              run: RUSTFLAGS='--cfg env="product"' cargo build --release
+            - name: Build Beta Release
+              if: inputs.buildStage == 'beta'
+              run: RUSTFLAGS='--cfg env="beta"' cargo build --release
+            - name: Build Release
+              if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
+              run: cargo build --release
+
+            - name: Upload artifact product
+              if: inputs.buildStage == 'product'
+              uses: actions/upload-artifact@v3
+              with:
+                  name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
+                  path: target/release/${{ inputs.packageName }}.exe
+
+            - name: Upload artifact
+              if: inputs.buildStage != 'product'
+              uses: actions/upload-artifact@v3
+              with:
+                  name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
+                  path: target/release/${{ inputs.packageName }}.exe
+
+            - name: post success message
+              if: always()
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - id: output
+              uses: ASzc/change-string-case-action@v5
+              with:
+                  string: ${{ runner.os }}
+        outputs:
+            os: ${{ steps.output.outputs.lowercase }}
+            version: ${{ steps.version.outputs.version }}
+
+    upload:
+        strategy:
+            matrix:
+                platform: [ubuntu-latest]
+        runs-on: ${{ matrix.platform }}
+        needs: build_rust
+
+        steps:
+            - name: post messasge
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 开始上传
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            - name: Download artifact product
+              if: inputs.buildStage == 'product'
+              uses: actions/download-artifact@v3
+              with:
+                  name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
+                  path: ./
+
+            - name: Download artifact
+              if: inputs.buildStage != 'product'
+              uses: actions/download-artifact@v3
+              with:
+                  name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
+                  path: ./
+            - name: Display structure of downloaded files
+              run: ls -R
+
+            - name: Upload to S3
+              if: inputs.buildStage == 'product'
+              uses: keithweaver/aws-s3-github-action@v1.0.0
+              with:
+                  command: cp
+                  source: ./${{ inputs.packageName }}.exe
+                  destination: s3://xbot/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                  aws_access_key_id: ${{ secrets.awsAccessKey }}
+                  aws_secret_access_key: ${{ secrets.awsSecretKey }}
+                  aws_region: ${{ inputs.awsRegion }}
+                  flags: --acl public-read
+
+            - name: Upload to S3
+              if: inputs.buildStage != 'product'
+              uses: keithweaver/aws-s3-github-action@v1.0.0
+              with:
+                  command: cp
+                  source: ./${{ inputs.packageName }}.exe
+                  destination: s3://xbot/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
+                  aws_access_key_id: ${{ secrets.awsAccessKey }}
+                  aws_secret_access_key: ${{ secrets.awsSecretKey }}
+                  aws_region: ${{ inputs.awsRegion }}
+                  flags: --acl public-read
+
+            - name: update version
+              if: inputs.buildStage != 'dev'
+              uses: fjogeleit/http-request-action@v1
+              with:
+                  url: ${{ secrets.updateApi }}/version/update
+                  method: "POST"
+                  customHeaders: '{"Content-Type": "application/json"}'
+                  data: '{"platform": "${{ needs.build_rust.outputs.os }}", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
+
+            - name: update download
+              if: inputs.buildStage == 'product' 
+              uses: fjogeleit/http-request-action@v1
+              with:
+                  url: ${{ secrets.updateApi }}/${{ needs.build_rust.outputs.os }}/update
+                  method: "POST"
+                  customHeaders: '{"Content-Type": "application/json"}'
+                  data: '{"link": "https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
+
+            - name: post success message
+              if: inputs.buildStage != 'product'
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 上传结果 ${{ job.status }}!
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                          - - tag: text
+                              text: '下载链接: '
+                            - tag: text
+                              text: https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
+
+            - name: post success message
+              if: inputs.buildStage == 'product'
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 上传结果 ${{ job.status }}!
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                          - - tag: text
+                              text: '下载链接: '
+                            - tag: text
+                              text: https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
