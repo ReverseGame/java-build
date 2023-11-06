@@ -59,7 +59,7 @@ jobs:
             - name: get cargo version
               id: version
               run: |
-                $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
+                $version = grep -m 1 -o 'version = ".*"' ./cli/Cargo.toml | sed 's/version = "\(.*\)"/\1/'
                 echo "::set-output name=version::$($version)"
 
             - name: test output
