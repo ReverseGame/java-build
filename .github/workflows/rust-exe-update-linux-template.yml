@@ -59,14 +59,11 @@ jobs:
             - name: get cargo version
               id: version
               run: |
-                version = $(grep -m 1 -o 'version = ".*"' ./cli/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
-                echo "::set-output name=version::$version"
-              shell: bash
+                echo "::set-output name=version::$(grep -m 1 -o 'version = ".*"' ./cli/Cargo.toml | sed 's/version = "\(.*\)"/\1/')"
 
             - name: test output
               run: |
                 echo "version = " ${{ steps.version.outputs.version }}
-              shell: bash
 
             - name: Rust setup
               uses: dtolnay/rust-toolchain@stable
