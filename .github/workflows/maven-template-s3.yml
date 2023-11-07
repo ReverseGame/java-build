@@ -122,7 +122,7 @@ jobs:
             PROFILE=${{ inputs.buildStage }}
             ENCRYPT=${{ secrets.encryptKey }}
       - name: Build and push Docker images
-        if: !inputs.encrypt
+        if: inputs.encrypt == false
         uses: docker/build-push-action@v3.1.1
         with:
           push: true
