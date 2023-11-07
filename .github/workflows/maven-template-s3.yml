@@ -29,6 +29,10 @@ on:
       clusterName:
         required: false
         type: string
+      encrypt:
+        required: false
+        type: boolean
+        default: false
     secrets:
       webhookFeishu:
         required: true
@@ -49,6 +53,8 @@ on:
       awsAccessKey:
         required: false
       awsSecretKey:
+        required: false
+      encryptKey:
         required: false
 
 
@@ -103,7 +109,20 @@ jobs:
           registry: ${{ secrets.dockerUrl }}
           username: ${{ secrets.dockerUsername }}
           password: ${{ secrets.dockerPassword }}
+      - name: Build and push Docker images with encrypt
+        if: inputs.encrypt
+        uses: docker/build-push-action@v3.1.1
+        with:
+          push: true
+          context: ${{ inputs.workDir }}
+          file: ${{ inputs.workDir }}/Dockerfile
+          tags: ${{ env.tag }}
+          build-args: |
+            JAR_FILE=${{ steps.artifactId.outputs.artifactId }}-${{ steps.project.outputs.version }}-exec.jar
+            PROFILE=${{ inputs.buildStage }}
+            ENCRYPT=${{ secrets.encryptKey }}
       - name: Build and push Docker images
+        if: !inputs.encrypt
         uses: docker/build-push-action@v3.1.1
         with:
           push: true
