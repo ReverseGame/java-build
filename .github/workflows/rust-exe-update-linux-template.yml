@@ -67,7 +67,10 @@ jobs:
 
             - name: install mingw64
               run: sudo apt-get install mingw-w64
-
+            - name: install clang
+              run: sudo apt-get install clang
+            - name: install nasm
+              run: sudo apt-get install nasm
             - name: Rust setup
               uses: dtolnay/rust-toolchain@stable
               with:
