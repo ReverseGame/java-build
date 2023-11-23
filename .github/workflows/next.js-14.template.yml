@@ -77,7 +77,7 @@ jobs:
       - name: Write env file
         uses: SpicyPizza/create-envfile@v2.0
         with:
-          envkey_NEXT_PUBLIC_APP_ENV: ${{ vars.NEXT_PUBLIC_APP_ENV }}
+          envkey_APP_ENV: ${{ vars.APP_ENV }}
           envkey_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
           envkey_NEXT_PUBLIC_WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
           path: .env
