@@ -54,11 +54,6 @@ jobs:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
 
     steps:
-      - name: make env
-        run: |
-          for env_var in ${{ env }} ; do
-            echo $env_var >> .env  
-          done
       - name: post message
         uses: foxundermoon/feishu-action@v2
         with:
