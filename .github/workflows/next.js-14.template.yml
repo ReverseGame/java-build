@@ -73,6 +73,11 @@ jobs:
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
+      - name: Write env file
+        run: | # load vars from github
+          for VAR in $(vars); do
+            echo "${VAR}=${!VAR}" >> .env
+          done
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
