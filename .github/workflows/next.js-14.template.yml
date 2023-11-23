@@ -54,12 +54,6 @@ jobs:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
 
     steps:
-      - name: Write environment variables to .env
-        # 将所有的 Environment 变量写入 .env 文件
-        run: |
-          for VAR in $(env); do
-            echo "$VAR=${!VAR}" >> .env
-          done
       - name: post message
         uses: foxundermoon/feishu-action@v2
         with:
