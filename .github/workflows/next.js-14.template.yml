@@ -46,6 +46,7 @@ on:
 
 jobs:
   node_build:
+    environment: ${{ inputs.buildStage }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -74,10 +75,12 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
       - name: Write env file
-        run: | # load vars from github
-          for VAR in $(vars); do
-            echo "${VAR}=${!VAR}" >> .env
-          done
+        uses: SpicyPizza/create-envfile@v2.0
+        with:
+          envkey_NEXT_PUBLIC_APP_ENV: ${{ vars.NEXT_PUBLIC_APP_ENV }}
+          envkey_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          envkey_NEXT_PUBLIC_WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
+          path: .env
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
