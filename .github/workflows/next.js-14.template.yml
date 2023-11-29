@@ -46,7 +46,7 @@ on:
 
 jobs:
   node_build:
-    environment: ${{ inputs.buildStage }}
+    environment: ${{ inputs.envRule }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
