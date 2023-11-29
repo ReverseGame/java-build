@@ -72,6 +72,8 @@ jobs:
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
+                    text: '所属分支: ${{ github.ref }}'
+                - - tag: text
                     text: '部署链接: '
                   - tag: a
                     text: github action
