@@ -8,6 +8,9 @@ on:
       buildStage:
         required: true
         type: string
+      envRule:
+        required: true
+        type: string
       workDir:
         required: true
         type: string
