@@ -82,9 +82,10 @@ jobs:
       - name: Write env file
         uses: SpicyPizza/create-envfile@v2.0
         with:
-          envkey_APP_ENV: ${{ vars.APP_ENV }}
+          envkey_NEXT_PUBLIC_APP_ENV: ${{ vars.NEXT_PUBLIC_APP_ENV }}
           envkey_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
           envkey_NEXT_PUBLIC_WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
+          envkey_NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           path: .env
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
