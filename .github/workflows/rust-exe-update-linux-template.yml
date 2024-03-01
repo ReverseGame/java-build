@@ -30,7 +30,7 @@ jobs:
     build_rust:
         strategy:
             matrix:
-                platform: [ubuntu-latest]
+                platform: [arc-runner-set]
         runs-on: ${{ matrix.platform }}
 
         steps:
