@@ -30,7 +30,7 @@ jobs:
     build_rust:
         strategy:
             matrix:
-                platform: [arc-runner-set]
+                platform: [ubuntu-latest]
         runs-on: ${{ matrix.platform }}
 
         steps:
@@ -64,20 +64,12 @@ jobs:
             - name: test output
               run: |
                 echo "version = " ${{ steps.version.outputs.version }}
-            - name: sudo apt-get update
-              run: sudo apt-get update -y
-            - name: sudo apt-get upgrade
-              run: sudo apt-get upgrade -y
             - name: install mingw64
               run: sudo apt-get install mingw-w64 -y
             - name: install clang
               run: sudo apt-get install clang -y
-            - name: install cmake
-              run: sudo apt-get install cmake -y
             - name: install nasm
               run: sudo apt-get install nasm -y
-            - name: install curl
-              run: sudo apt-get install curl -y
             - name: Rust setup
               uses: dtolnay/rust-toolchain@stable
               with:
