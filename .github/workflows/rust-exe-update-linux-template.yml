@@ -69,11 +69,11 @@ jobs:
             - name: sudo apt-get upgrade
               run: sudo apt-get upgrade -y
             - name: install mingw64
-              run: sudo apt-get install mingw-w64
+              run: sudo apt-get install mingw-w64 -y
             - name: install clang
-              run: sudo apt-get install clang
+              run: sudo apt-get install clang -y
             - name: install nasm
-              run: sudo apt-get install nasm
+              run: sudo apt-get install nasm -y
             - name: Rust setup
               uses: dtolnay/rust-toolchain@stable
               with:
