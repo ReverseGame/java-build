@@ -64,7 +64,10 @@ jobs:
             - name: test output
               run: |
                 echo "version = " ${{ steps.version.outputs.version }}
-
+            - name: sudo apt-get update
+              run: sudo apt-get update -y
+            - name: sudo apt-get upgrade
+              run: sudo apt-get upgrade -y
             - name: install mingw64
               run: sudo apt-get install mingw-w64
             - name: install clang
@@ -221,7 +224,7 @@ jobs:
                   data: '{"platform": "windows", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
 
             - name: update download
-              if: inputs.buildStage == 'product' 
+              if: inputs.buildStage == 'product'
               uses: fjogeleit/http-request-action@v1
               with:
                   url: ${{ secrets.updateApi }}/windows/update
