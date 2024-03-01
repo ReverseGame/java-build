@@ -74,6 +74,8 @@ jobs:
               run: sudo apt-get install clang -y
             - name: install nasm
               run: sudo apt-get install nasm -y
+            - name: install curl
+              run: sudo apt-get install curl -y
             - name: Rust setup
               uses: dtolnay/rust-toolchain@stable
               with:
