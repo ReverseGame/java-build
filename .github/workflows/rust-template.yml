@@ -19,6 +19,16 @@ on:
       projectPrefix:
         required: true
         type: string
+      eks:
+        required: false
+        type: boolean
+        default: false
+      awsRegion:
+        required: false
+        type: string
+      clusterName:
+        required: false
+        type: string
     secrets:
       webhookFeishu:
         required: true
@@ -32,6 +42,10 @@ on:
         required: true
       kubeConfig:
         required: true
+      awsAccessKey:
+        required: false
+      awsSecretKey:
+        required: false
 
 jobs:
   build-rust:
@@ -180,7 +194,7 @@ jobs:
                   - tag: text
                     text: ${{ env.tag }}
   deploy_product:
-    if: inputs.buildStage == 'product'
+    if: inputs.buildStage == 'product' && !inputs.eks
     needs: build-rust
     runs-on: ubuntu-latest
     env:
@@ -215,6 +229,72 @@ jobs:
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
+
+  deploy_eks:
+    if: inputs.buildStage == 'product' && inputs.eks
+    needs: build-rust
+    runs-on: ubuntu-latest
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始部署
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.awsAccessKey }}
+          aws-secret-access-key: ${{ secrets.awsSecretKey }}
+          aws-region: ${{ env.aws_region }}
+      - uses: actions/checkout@v3
+      - name: create 
+        uses: ianbelcher/eks-kubectl-action@master
+        with:
+          cluster_name: ${{ inputs.clusterName }}
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}k8s-${{ inputs.buildStage }}.yaml
+      - name: apply
+        uses: ianbelcher/eks-kubectl-action@master
+        with:
+          cluster_name: ${{ inputs.clusterName }}
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
