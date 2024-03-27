@@ -259,6 +259,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+      aws_region: ${{ inputs.awsRegion }}
+
     steps:
       - name: post message
         uses: foxundermoon/feishu-action@v2
