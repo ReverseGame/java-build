@@ -84,6 +84,8 @@ jobs:
         run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install openssl
+        run: sudo apt-get install libssl-dev
       - name: Set up cache
         uses: actions/cache@v3
         continue-on-error: true
