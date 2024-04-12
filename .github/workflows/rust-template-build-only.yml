@@ -94,7 +94,7 @@ jobs:
         with:
           push: true
           context: ${{ inputs.workDir }}
-          file: ${{ inputs.workDir }}/${{ inputs.dockerDir }}Dockerfile
+          file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
       - name: Save cache 
         id: cache-save
