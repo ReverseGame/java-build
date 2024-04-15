@@ -54,6 +54,7 @@ jobs:
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - name: Checkout repository
               uses: actions/checkout@v3
+            - uses: ilammy/setup-nasm@v1
 
             - name: get cargo version
               id: version
