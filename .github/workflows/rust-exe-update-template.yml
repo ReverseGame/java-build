@@ -28,7 +28,7 @@ on:
 
 jobs:
     build_rust:
-        runs-on: windows
+        runs-on: rust-windows
 
         steps:
             - name: post messasge
