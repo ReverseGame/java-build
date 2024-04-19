@@ -51,7 +51,7 @@ jobs:
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - name: Checkout repository
               uses: actions/checkout@v3
-            - uses: ilammy/setup-nasm@v1
+            # - uses: ilammy/setup-nasm@v1
 
             - name: get cargo version
               id: version
@@ -66,12 +66,12 @@ jobs:
                 Write-Host "version = " ${{ steps.version.outputs.version }}
               shell: powershell
 
-            - name: Rust setup
-              uses: dtolnay/rust-toolchain@master
-              with:
-                  toolchain: stable
-            - name: Install cargo-llvm-cov
-              uses: taiki-e/install-action@cargo-llvm-cov
+            # - name: Rust setup
+            #   uses: dtolnay/rust-toolchain@master
+            #   with:
+            #       toolchain: stable
+            # - name: Install cargo-llvm-cov
+            #   uses: taiki-e/install-action@cargo-llvm-cov
 
             - name: Set up cache
               uses: actions/cache@v3
