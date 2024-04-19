@@ -67,7 +67,9 @@ jobs:
               shell: powershell
 
             - name: Rust setup
-              uses: dtolnay/rust-toolchain@stable
+              uses: dtolnay/rust-toolchain@master
+              with:
+                  toolchain: stable
             - name: Install cargo-llvm-cov
               uses: taiki-e/install-action@cargo-llvm-cov
 
