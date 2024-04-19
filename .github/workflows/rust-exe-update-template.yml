@@ -28,10 +28,7 @@ on:
 
 jobs:
     build_rust:
-        strategy:
-            matrix:
-                platform: [windows-server]
-        runs-on: ${{ matrix.platform }}
+        runs-on: Windows
 
         steps:
             - name: post messasge
