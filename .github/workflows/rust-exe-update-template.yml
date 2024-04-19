@@ -30,7 +30,7 @@ jobs:
     build_rust:
         strategy:
             matrix:
-                platform: [windows-local]
+                platform: [windows-server]
         runs-on: ${{ matrix.platform }}
 
         steps:
