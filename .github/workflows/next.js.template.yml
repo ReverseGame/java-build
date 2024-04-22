@@ -128,8 +128,8 @@ jobs:
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   deploy_local:
-    runs-on: self-hosted
-    if: inputs.buildStage == 'beta' && !inputs.eks 
+    runs-on: Linux
+    if: inputs.buildStage == 'beta' && !inputs.eks
     needs: node_build
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
@@ -184,7 +184,7 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   deploy_product:
     runs-on: ubuntu-latest
-    if: inputs.buildStage == 'product' && !inputs.eks 
+    if: inputs.buildStage == 'product' && !inputs.eks
     needs: node_build
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
@@ -237,10 +237,10 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            
+
   deploy_eks:
     runs-on: ubuntu-latest
-    if: inputs.buildStage == 'product' && inputs.eks 
+    if: inputs.buildStage == 'product' && inputs.eks
     needs: node_build
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
@@ -272,7 +272,7 @@ jobs:
           aws-region: ${{ env.aws_region }}
 
       - uses: actions/checkout@v3
-      - name: create 
+      - name: create
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}
@@ -301,4 +301,3 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            
