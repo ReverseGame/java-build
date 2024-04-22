@@ -145,7 +145,7 @@ jobs:
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   deploy_local:
-    runs-on: linux
+    runs-on: Linux
     if: inputs.buildStage == 'beta' && !inputs.eks
     needs: node_build
     env:
