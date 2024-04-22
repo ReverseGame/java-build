@@ -70,6 +70,8 @@ jobs:
         run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install openssl
+        run: sudo apt-get install libssl-dev libsasl2-dev
       - name: Set up cache
         uses: actions/cache@v3
         continue-on-error: true
@@ -81,7 +83,8 @@ jobs:
             target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
+      - name: Build Release
+        run: cargo build --release
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -93,7 +96,7 @@ jobs:
         with:
           push: true
           context: ${{ inputs.workDir }}
-          file: ${{ inputs.workDir }}/${{ inputs.dockerDir }}Dockerfile
+          file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
       - name: Save cache 
         id: cache-save
