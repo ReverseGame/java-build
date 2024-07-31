@@ -119,7 +119,7 @@ jobs:
   deploy_local:
     if: inputs.buildStage == 'beta' && !inputs.eks
     needs: node_build
-    runs-on: self-hosted
+    runs-on: [ self-hosted, linux ]
     strategy:
       matrix:
         node-version: [ 16.x ]
