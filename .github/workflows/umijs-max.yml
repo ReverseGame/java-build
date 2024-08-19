@@ -56,9 +56,6 @@ on:
 jobs:
   node_build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: ${{ inputs.nodeVersion || 'latest' }}
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
@@ -81,10 +78,10 @@ jobs:
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ inputs.nodeVersion || 'latest' }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ inputs.nodeVersion || 'latest' }}
           cache: ${{ inputs.nodeCache || '' }}
           cache-dependency-path: ${{ inputs.nodeCacheDependencyPath || '' }}
       - run: yarn --frozen-lockfile
@@ -131,9 +128,6 @@ jobs:
     if: inputs.buildStage == 'beta' && !inputs.eks
     needs: node_build
     runs-on: Linux
-    strategy:
-      matrix:
-        node-version: [ 18.x ]
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
@@ -193,9 +187,6 @@ jobs:
     if: inputs.buildStage == 'product' && !inputs.eks
     needs: node_build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [ 18.x ]
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
