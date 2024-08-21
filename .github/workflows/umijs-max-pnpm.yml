@@ -83,7 +83,7 @@ jobs:
         with:
           node-version: ${{inputs.nodeVersion}}
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: ${{ inputs.workDir }}/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install
