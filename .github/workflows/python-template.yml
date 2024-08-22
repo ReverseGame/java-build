@@ -115,7 +115,7 @@ jobs:
   deploy_local:
     if: inputs.buildStage == 'beta' && !inputs.eks
     needs: python_reuse_build
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
