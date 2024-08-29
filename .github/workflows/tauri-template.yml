@@ -1,0 +1,489 @@
+name: Tauri CI
+
+on:
+  workflow_call:
+    inputs:
+      buildStage:
+        required: true
+        type: string
+      nodeVersion:
+        required: false
+        type: string
+        default: "lts/*"
+      awsRegion:
+        required: true
+        type: string
+      buildFeishuWebhook:
+        required: false
+        type: string
+      releaseFeishuWebhook:
+        required: false
+        type: string
+    secrets:
+      awsAccessKey:
+        required: true
+      awsSecretKey:
+        required: true
+      tauriPrivateKey:
+        required: true
+      tauriKeyPassword:
+        required: true
+
+jobs:
+  build-tauri:
+    outputs:
+      product-info: ${{ steps.product-info.outputs.result }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos"
+            os: "macos"
+            arch: "aarch64"
+            args: ""
+          - platform: "rust-windows"
+            os: "windows"
+            arch: "x86_64"
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout code (检出代码)
+        uses: actions/checkout@v4
+
+      - name: Get Project Info
+        id: product-info
+        uses: actions/github-script@v7
+        with:
+          result-encoding: json
+          script: |
+            const version = require('./package.json').version
+            const productName = require('./src-tauri/tauri.conf.json').package.productName
+            const linuxFileAppName  = productName
+              .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+              .replace(/([A-Z])([A-Z])(?=[a-z])/g, '$1-$2')
+              .replace(/[ _.]/g, '-')
+              .replace(/[()[\]{}]/g, '')
+              .toLowerCase();
+
+            console.log(`version: ${version ? version : '未找到'}`)
+            console.log(`productName: ${productName ? productName : '未找到'}`)
+            console.log(`linuxFileAppName: ${linuxFileAppName ? linuxFileAppName : '未找到'}`)
+
+            return {
+              version,
+              productName,
+              linuxFileAppName
+            }
+
+      - uses: actions/github-script@v7
+        id: message-content
+        env:
+          RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+        with:
+          result-encoding: json
+          script: |
+            const gh = {
+              server_url: process.env.SERVER_URL,
+              repository: process.env.REPOSITORY,
+              run_id: process.env.RUN_ID
+            }
+            return `**构建链接**\n[点击查看 Actions](${gh.server_url}/${gh.repository}/actions/runs/${gh.run_id})`
+
+      - name: Post Message (发送飞书 Webhook 消息)
+        uses: Comori/feishu@v0.0.5
+        if: success() && ${{ inputs.buildFeishuWebhook }}
+        with:
+          webhook-url: ${{ inputs.buildFeishuWebhook }}
+          msg-type: cardkit
+          cardkit-id: AAq15syMYoq55
+          cardkit-version: 0.0.3
+          content: |
+            title=${{ fromJson(steps.product-info.outputs.result).productName }} ${{ fromJson(steps.product-info.outputs.result).version }} ${{ matrix.os }} 开始构建
+            sub_title=构建流程: ${{ inputs.buildStage }}
+            content=${{ steps.message-content.outputs.result }}
+
+      # - name: Setup Rust (设置 Rust 版本)
+      #   if: matrix.platform == 'macos'
+      #   uses: dtolnay/rust-toolchain@stable
+      #   with:
+      #     targets: "aarch64-apple-darwin,x86_64-apple-darwin"
+
+      - name: Setup pnpm (安装 pnpm)
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup node (设置 node 版本)
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.nodeVersion }}
+
+      - name: Install frontend dependencies (安装前端依赖)
+        run: pnpm install
+
+      - name: Build tauri (构建 tauri)
+        id: build
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
+          TAURI_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
+        with:
+          args: ${{ matrix.args }}
+
+      - name: Upload Artifact (上传构建产物)
+        if: success() && matrix.os == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: error
+          overwrite: true
+          name: macos-bundle
+          path: |
+            ./src-tauri/target/release/bundle/macos/*.tar.gz
+            ./src-tauri/target/release/bundle/macos/*.tar.gz.sig
+
+      - name: Upload Artifact (上传构建产物)
+        uses: actions/upload-artifact@v4
+        if: success() && matrix.os == 'windows'
+        with:
+          if-no-files-found: error
+          overwrite: true
+          name: windows-bundle
+          path: |
+            ./src-tauri/target/release/bundle/msi/*.msi.zip
+            ./src-tauri/target/release/bundle/msi/*.msi.zip.sig
+
+      - name: Post Message (发送飞书 Webhook 消息)
+        uses: Comori/feishu@v0.0.5
+        if: success() && ${{ inputs.buildFeishuWebhook }}
+        with:
+          webhook-url: ${{ inputs.buildFeishuWebhook }}
+          msg-type: cardkit
+          cardkit-id: AAq15syMYoq55
+          cardkit-version: 0.0.3
+          content: |
+            title=${{ fromJson(steps.product-info.outputs.result).productName }} ${{ fromJson(steps.product-info.outputs.result).version }} ${{ matrix.os }} 构建完成
+            sub_title=构建流程: ${{ inputs.buildStage }}
+            content=${{ steps.message-content.outputs.result }}
+
+  publish-beta:
+    if: ${{ inputs.buildStage == 'beta' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: [build-tauri]
+    steps:
+      - name: Checkout code (检出代码)
+        uses: actions/checkout@v4
+
+      - name: Download Windows Artifact (下载构建产物)
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
+
+      - name: build install.json
+        uses: actions/github-script@v7
+        id: install-info
+        env:
+          VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
+          PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
+        with:
+          result-encoding: json
+          script: |
+            const fs = require('fs')
+
+            const version = process.env.VERSION
+            const productName = process.env.PRODUCT_NAME
+
+            console.log(fs.readdirSync(`./releases`))
+            const releases = fs.readdirSync(`./releases/${productName}`)
+            console.log(releases)
+
+
+            // windows
+            const windowsApp = releases.find(release => release.endsWith('.msi.zip'))
+            const windowsSig = releases.find(release => release.endsWith('.msi.zip.sig'))
+            const windowsSigContent = fs.readFileSync(`./releases/${productName}/${windowsSig}`, 'utf-8')
+
+            // macos
+            const macosApp = releases.find(release => release.includes('.app.tar.gz'))
+            const macosSig = releases.find(release => release.includes('.app.tar.gz.sig'))
+            const macosSigContent = fs.readFileSync(`./releases/${productName}/${macosSig}`, 'utf-8')
+
+            const updateData = {
+              version: `v${version}`,
+              note: `v${version}`,
+              pub_date: new Date().toISOString(),
+              platform: {
+                "windows-x86_64": {
+                  url: `https://ipoasis-pic.s3.amazonaws.com/${productName}/${version}-beta/${windowsApp}`,
+                  signature: windowsSigContent
+                },
+                "darwin-aarch64": {
+                  url: `https://ipoasis-pic.s3.amazonaws.com/${productName}/${version}-beta/${macosApp}`,
+                  signature: macosSigContent
+                }
+              }
+            }
+
+            fs.writeFileSync(`./releases/install.json`, JSON.stringify(updateData, null, 2))
+
+            return updateData
+
+      - name: Upload Release to S3
+        if: success()
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          source: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/
+          destination: s3://ipoasis-pic/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ fromJson(needs.build-tauri.outputs.product-info).version }}-beta/
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read --recursive
+
+      - name: Get Update Log
+        id: update-log
+        uses: actions/github-script@v7
+        env:
+          VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
+        with:
+          result-encoding: string
+          script: |
+            const path = require('path')
+            const fs = require('fs')
+            const regTag = /## v[\d.]+/
+            const currentVersion = process.env.VERSION
+
+            const file = path.join(process.cwd(), 'UPDATE_LOG.md')
+
+            if (!fs.existsSync(file)) {
+              return "未找到更新日志文件"
+            }
+
+            let _tag
+            const tagMap = {}
+            const content = fs.readFileSync(file, { encoding: 'utf-8' }).split('\n')
+
+            content.forEach((line, index) => {
+              if (regTag.test(line)) {
+                _tag = line.replace('## ', '').trim()
+                if (!tagMap[_tag]) {
+                  tagMap[_tag] = []
+                }
+              } else if (_tag) {
+                tagMap[_tag].push(line)
+              } else if (regTag.test(content[index + 1])) {
+                _tag = null
+              }
+            })
+
+            if (tagMap['v' + currentVersion]) {
+              return tagMap['v' + currentVersion].join('\n').trim()
+            } else {
+              return "无"
+            }
+
+      - uses: actions/github-script@v7
+        id: message-content
+        env:
+          PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).productName }}
+          VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
+          UPDATE_LOG: ${{ steps.update-log.outputs.result }}
+          INSTALL_INFO: ${{ steps.install-info.outputs.result }}
+        with:
+          result-encoding: json
+          script: |
+            const productName = process.env.PRODUCT_NAME
+            const version = process.env.VERSION
+            const updateLog = process.env.UPDATE_LOG
+
+            const installInfo = JSON.parse(process.env.INSTALL_INFO)
+
+            const windowsUrl = `[Windows下载](${installInfo.platform['windows-x86_64'].url})`
+            const macosUrl = `[MacOS下载](${installInfo.platform['darwin-aarch64'].url})`
+
+            return `**🌟 更新内容**\n${updateLog}\n\n**🔗 下载链接**\n${windowsUrl}\n${macosUrl}`
+
+      - name: Post Message (发送飞书 Webhook 消息)
+        uses: Comori/feishu@v0.0.5
+        if: success() && ${{ inputs.buildFeishuWebhook }}
+        with:
+          webhook-url: ${{ inputs.buildFeishuWebhook }}
+          msg-type: cardkit
+          cardkit-id: AAq15syMYoq55
+          cardkit-version: 0.0.3
+          content: |
+            title=${{ fromJson(needs.build-tauri.outputs.product-info).productName }} ${{ fromJson(needs.build-tauri.outputs.product-info).version }} 测试版本
+            content=${{ steps.message-content.outputs.result }}
+
+  publish-product:
+    if: ${{ inputs.buildStage == 'product' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: [build-tauri]
+    steps:
+      - name: Download Artifact (下载构建产物)
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
+
+      - name: build install.json
+        uses: actions/github-script@v7
+        id: install-info
+        env:
+          VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
+          PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
+        with:
+          result-encoding: json
+          script: |
+            const fs = require('fs')
+
+            const version = process.env.VERSION
+            const productName = process.env.PRODUCT_NAME
+
+            console.log(fs.readdirSync(`./releases`))
+            const releases = fs.readdirSync(`./releases/${productName}`)
+            console.log(releases)
+
+
+            // windows
+            const windowsApp = releases.find(release => release.endsWith('.msi.zip'))
+            const windowsSig = releases.find(release => release.endsWith('.msi.zip.sig'))
+            const windowsSigContent = fs.readFileSync(`./releases/${productName}/${windowsSig}`, 'utf-8')
+
+            // macos
+            const macosApp = releases.find(release => release.includes('.app.tar.gz'))
+            const macosSig = releases.find(release => release.includes('.app.tar.gz.sig'))
+            const macosSigContent = fs.readFileSync(`./releases/${productName}/${macosSig}`, 'utf-8')
+
+            const updateData = {
+              version: `v${process.env.VERSION}`,
+              note: `v${process.env.VERSION}`,
+              pub_date: new Date().toISOString(),
+              platforms: {
+                "windows-x86_64": {
+                  url: `https://ipoasis-pic.s3.amazonaws.com/${productName}/${version}/${windowsApp}`,
+                  signature: windowsSigContent
+                },
+                "darwin-aarch64": {
+                  url: `https://ipoasis-pic.s3.amazonaws.com/${productName}/${version}/${macosApp}`,
+                  signature: macosSigContent
+                }
+              }
+            }
+
+
+            fs.mkdirSync('./updater', { recursive: true })
+            fs.writeFileSync(`./updater/install.json`, JSON.stringify(updateData, null, 2))
+
+            return updateData
+
+      - name: Upload Release to S3
+        if: success()
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          source: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/
+          destination: s3://ipoasis-pic/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ fromJson(needs.build-tauri.outputs.product-info).version }}/
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read --recursive
+
+      - name: Upload install.json to S3
+        if: success()
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          source: ./updater/install.json
+          destination: s3://ipoasis-pic/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/install.json
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read
+
+      - name: deploy install.json (部署 install.json)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./updater
+          force_orphan: true
+
+      - name: Get Update Log
+        id: update-log
+        uses: actions/github-script@v7
+        env:
+          VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
+        with:
+          result-encoding: string
+          script: |
+            const path = require('path')
+            const fs = require('fs')
+            const regTag = /## v[\d.]+/
+            const currentVersion = process.env.VERSION
+
+            const file = path.join(process.cwd(), 'UPDATE_LOG.md')
+
+            if (!fs.existsSync(file)) {
+              return "未找到更新日志文件"
+            }
+
+            let _tag
+            const tagMap = {}
+            const content = fs.readFileSync(file, { encoding: 'utf-8' }).split('\n')
+
+            content.forEach((line, index) => {
+              if (regTag.test(line)) {
+                _tag = line.replace('## ', '').trim()
+                if (!tagMap[_tag]) {
+                  tagMap[_tag] = []
+                }
+              } else if (_tag) {
+                tagMap[_tag].push(line)
+              } else if (regTag.test(content[index + 1])) {
+                _tag = null
+              }
+            })
+
+            if (tagMap['v' + currentVersion]) {
+              return tagMap['v' + currentVersion].join('\n').trim()
+            } else {
+              return "未找到更新日志"
+            }
+
+      - uses: actions/github-script@v7
+        id: message-content
+        env:
+          PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).productName }}
+          VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
+          UPDATE_LOG: ${{ steps.update-log.outputs.result }}
+          INSTALL_INFO: ${{ steps.install-info.outputs.result }}
+        with:
+          result-encoding: json
+          script: |
+            const productName = process.env.PRODUCT_NAME
+            const version = process.env.VERSION
+            const updateLog = process.env.UPDATE_LOG
+
+            const installInfo = JSON.parse(process.env.INSTALL_INFO)
+
+            const windowsUrl = `[Windows下载](${installInfo.platform['windows-x86_64'].url})`
+            const macosUrl = `[MacOS下载](${installInfo.platform['darwin-aarch64'].url})`
+
+            return `**🌟 更新内容**\n${updateLog}\n\n**🔗 下载链接**\n${windowsUrl}\n${macosUrl}`
+
+      - name: Post Message (发送飞书 Webhook 消息)
+        uses: Comori/feishu@v0.0.5
+        if: success() && ${{ inputs.releaseFeishuWebhook }}
+        with:
+          webhook-url: ${{ inputs.releaseFeishuWebhook }}
+          msg-type: cardkit
+          cardkit-id: AAq15syMYoq55
+          cardkit-version: 0.0.3
+          content: |
+            title=${{ fromJson(needs.build-tauri.outputs.product-info).productName }} ${{ fromJson(needs.build-tauri.outputs.product-info).version }}  发布
+            content=${{ steps.message-content.outputs.result }}

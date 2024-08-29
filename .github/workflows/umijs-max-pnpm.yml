@@ -86,7 +86,7 @@ jobs:
           cache-dependency-path: ${{ inputs.workDir }}/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
         working-directory: ${{ inputs.workDir }}
 
       - name: Build
