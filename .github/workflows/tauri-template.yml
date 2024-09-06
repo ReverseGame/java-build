@@ -218,7 +218,7 @@ jobs:
               version: `v${version}`,
               note: `v${version}`,
               pub_date: new Date().toISOString(),
-              platform: {
+              platforms: {
                 "windows-x86_64": {
                   url: `https://ipoasis-pic.s3.amazonaws.com/${productName}/${version}-beta/${windowsApp}`,
                   signature: windowsSigContent
@@ -303,8 +303,8 @@ jobs:
 
             const installInfo = JSON.parse(process.env.INSTALL_INFO)
 
-            const windowsUrl = `[Windows下载](${installInfo.platform['windows-x86_64'].url})`
-            const macosUrl = `[MacOS下载](${installInfo.platform['darwin-aarch64'].url})`
+            const windowsUrl = `[Windows下载](${installInfo.platforms['windows-x86_64'].url})`
+            const macosUrl = `[MacOS下载](${installInfo.platforms['darwin-aarch64'].url})`
 
             return `**🌟 更新内容**\n${updateLog}\n\n**🔗 下载链接**\n${windowsUrl}\n${macosUrl}`
 
@@ -471,8 +471,8 @@ jobs:
 
             const installInfo = JSON.parse(process.env.INSTALL_INFO)
 
-            const windowsUrl = `[Windows下载](${installInfo.platform['windows-x86_64'].url})`
-            const macosUrl = `[MacOS下载](${installInfo.platform['darwin-aarch64'].url})`
+            const windowsUrl = `[Windows下载](${installInfo.platforms['windows-x86_64'].url})`
+            const macosUrl = `[MacOS下载](${installInfo.platforms['darwin-aarch64'].url})`
 
             return `**🌟 更新内容**\n${updateLog}\n\n**🔗 下载链接**\n${windowsUrl}\n${macosUrl}`
 
