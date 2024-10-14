@@ -51,6 +51,7 @@ on:
 
 jobs:
   node_build:
+    environment: ${{ inputs.envRule }}
     runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
