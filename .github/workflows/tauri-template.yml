@@ -145,7 +145,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
           TAURI_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
-          TAURI_SIGNING_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
         with:
           args: ${{ matrix.args }}
 
