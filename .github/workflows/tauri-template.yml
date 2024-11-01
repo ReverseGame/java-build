@@ -10,6 +10,10 @@ on:
         required: false
         type: string
         default: "lts/*"
+      tauriVersion:
+        required: false
+        type: string
+        default: "1"
       awsRegion:
         required: true
         type: string
@@ -131,6 +135,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
           TAURI_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
+          TAURI_SIGNING_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
         with:
           args: ${{ matrix.args }}
 
