@@ -58,11 +58,20 @@ jobs:
       - name: Get Project Info
         id: product-info
         uses: actions/github-script@v7
+        env:
+          TAURI_VERSION: ${{ inputs.tauriVersion }}
         with:
           result-encoding: json
           script: |
             const version = require('./package.json').version
-            const productName = require('./src-tauri/tauri.conf.json').package.productName
+            const tauriVersion = process.env.TAURI_VERSION
+            let productName = ""
+            if (tauriVersion === "1") {
+              productName = require('./src-tauri/tauri.conf.json').package.productName
+            } else {
+              productName = require('./src-tauri/tauri.conf.json').productName
+            }
+
             const linuxFileAppName  = productName
               .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
               .replace(/([A-Z])([A-Z])(?=[a-z])/g, '$1-$2')
