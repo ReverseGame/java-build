@@ -26,7 +26,9 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Setup Deno
-              uses: denoland/setup-deno@v2
+              uses: denoland/setup-deno@v1
+              with:
+                  deno-version: v2.x
 
             - name: Build executable
               run: deno compile --output ${{ inputs.output }}.exe --allow-net ${{ inputs.main_file }}
