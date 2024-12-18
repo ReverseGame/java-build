@@ -79,7 +79,7 @@ jobs:
                               text: github action
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
                           - - tag: text
-                              text: 'MD5: '
+                              text: 'SHA256: '
                             - tag: text
                               text: ${{ needs.build.outputs.hash }}
                           - - tag: text
