@@ -10,6 +10,10 @@ on:
         required: false
         type: string
         default: "lts/*"
+      tauriVersion:
+        required: false
+        type: string
+        default: "1"
       awsRegion:
         required: true
         type: string
@@ -54,11 +58,20 @@ jobs:
       - name: Get Project Info
         id: product-info
         uses: actions/github-script@v7
+        env:
+          TAURI_VERSION: ${{ inputs.tauriVersion }}
         with:
           result-encoding: json
           script: |
             const version = require('./package.json').version
-            const productName = require('./src-tauri/tauri.conf.json').package.productName
+            const tauriVersion = process.env.TAURI_VERSION
+            let productName = ""
+            if (tauriVersion === "1") {
+              productName = require('./src-tauri/tauri.conf.json').package.productName
+            } else {
+              productName = require('./src-tauri/tauri.conf.json').productName
+            }
+
             const linuxFileAppName  = productName
               .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
               .replace(/([A-Z])([A-Z])(?=[a-z])/g, '$1-$2')
@@ -131,6 +144,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
           TAURI_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
         with:
           args: ${{ matrix.args }}
 

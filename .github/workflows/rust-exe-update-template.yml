@@ -56,14 +56,14 @@ jobs:
             - name: get cargo version
               id: version
               run: |
-                $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
-                echo "::set-output name=version::$($version)"
-                Write-Output "version=$($version)" >> $Env:GITHUB_OUTPUT
+                  $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
+                  echo "::set-output name=version::$($version)"
+                  Write-Output "version=$($version)" >> $Env:GITHUB_OUTPUT
               shell: powershell
 
             - name: test output
               run: |
-                Write-Host "version = " ${{ steps.version.outputs.version }}
+                  Write-Host "version = " ${{ steps.version.outputs.version }}
               shell: powershell
 
             # - name: Rust setup
@@ -175,6 +175,7 @@ jobs:
               with:
                   name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
                   path: ./
+
             - name: Display structure of downloaded files
               run: ls -R
 
@@ -196,7 +197,7 @@ jobs:
               with:
                   command: cp
                   source: ./${{ inputs.packageName }}.exe
-                  destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
+                  destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -242,7 +243,7 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://xbot.s3.amazonaws.com/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
+                              text: https://xbot.s3.amazonaws.com/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe
 
             - name: post success message
               if: inputs.buildStage == 'product'
