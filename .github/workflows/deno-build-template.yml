@@ -1,0 +1,93 @@
+name: Deno CI
+
+on:
+    workflow_call:
+        inputs:
+            output:
+                required: true
+                type: string
+            main_file:
+                required: true
+                type: string
+        secrets:
+            webhookFeishu:
+                required: true
+            awsAccessKey:
+                required: true
+            awsSecretKey:
+                required: true
+
+jobs:
+    build:
+        runs-on: rust-windows
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Deno
+              uses: denoland/setup-deno@v2
+              with:
+                  deno-version: v2.x
+
+            - name: Build executable
+              run: deno compile --output ${{ inputs.output }}.exe --allow-net ${{ inputs.main_file }}
+
+            - name: Calculate MD5 hash
+              id: calculate_md5
+              run: |
+                  $md5 = Get-FileHash -Path ${{ inputs.output }}.exe -Algorithm MD5
+                  Write-Output"MD5_HASH=$($md5.Hash)" >> $Env:GITHUB_OUTPUT
+
+            - name: Upload executable
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ inputs.output }}.exe
+                  path: ${{ inputs.output }}.exe
+        outputs:
+            md5_hash: ${{ steps.calculate_md5.outputs.MD5_HASH }}
+    upload:
+        runs-on: ubuntu-latest
+        needs: build
+        env:
+            awsAccessKey: ${{ secrets.AWS_ACCESS_KEY_MAIN }}
+            awsSecretKey: ${{ secrets.AWS_SECRET_ACCESS_KEY_MAIN }}
+        steps:
+            - name: download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: ${{ inputs.output }}.exe
+                  path: ./
+            - name: 上传到 s3
+              uses: keithweaver/aws-s3-github-action@v1.0.0
+              with:
+                  command: cp
+                  source: ${{ inputs.output }}.exe
+                  destination: s3://xbot/${{ inputs.output }}/${{ inputs.output }}-${{ needs.build.outputs.md5_hash }}.exe
+                  aws_access_key_id: ${{ env.awsAccessKey }}
+                  aws_secret_access_key: ${{ env.awsSecretKey }}
+                  aws_region: us-east-1
+                  flags: --acl public-read
+            - name: post success message
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url:
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.output }} 上传结果 ${{ job.status }}!
+                          content:
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                          - - tag: text
+                              text: 'MD5: '
+                            - tag: text
+                              text: ${{ needs.build.outputs.md5_hash }}
+                          - - tag: text
+                              text: '下载链接: '
+                            - tag: text
+                              text: https://xbot.s3.amazonaws.com/${{inputs.output}}/${{ inputs.output }}-${{  needs.build.outputs.md5_hash }}.exe
