@@ -66,7 +66,7 @@ jobs:
             - name: post success message
               uses: foxundermoon/feishu-action@v2
               with:
-                  url:
+                  url: ${{ secrets.webhookFeishu }}
                   msg_type: post
                   content: |
                       post:
