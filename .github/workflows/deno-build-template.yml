@@ -19,16 +19,14 @@ on:
 
 jobs:
     build:
-        runs-on: rust-windows
+        runs-on: windows-latest
 
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
 
             - name: Setup Deno
-              uses: denoland/setup-deno@v1
-              with:
-                  deno-version: v2.0.6
+              uses: denoland/setup-deno@v2
 
             - name: Build executable
               run: deno compile --output ${{ inputs.output }}.exe --allow-net ${{ inputs.main_file }}
