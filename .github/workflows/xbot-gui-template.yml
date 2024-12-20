@@ -32,6 +32,8 @@ on:
         required: true
       tauriKeyPassword:
         required: true
+      patToken:
+        required: true
 
 jobs:
   build-tauri:
@@ -51,6 +53,7 @@ jobs:
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
         with:
+            token: ${{ secrets.patToken }}
             submodules: recursive
 
       - name: Get Project Info
@@ -179,6 +182,9 @@ jobs:
     steps:
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
+        with:
+            token: ${{ secrets.patToken }}
+            submodules: recursive
 
       - name: Download Windows Artifact (下载构建产物)
         uses: actions/download-artifact@v4
