@@ -46,7 +46,7 @@ jobs:
           - platform: "rust-windows"
             os: "windows"
             arch: "x86_64"
-            args: ""
+            args: ${{ inputs.buildStage == 'dev' && '-d -f dev --config ./src-tauri/tauri.conf.dev.json' || inputs.buildStage == 'beta' && '-d -f dev --config ./src-tauri/tauri.conf.beta.json' || '' }}
 
     runs-on: ${{ matrix.platform }}
     steps:
