@@ -84,6 +84,10 @@ jobs:
           envkey_TWOCAPTCHA_CLIENT_KEY: ${{ vars.TWOCAPTCHA_CLIENT_KEY }}
           envkey_YESCAPTCHA_CLIENT_KEY: ${{ vars.YESCAPTCHA_CLIENT_KEY }}
           envkey_CAPMONSTER_CLIENT_KEY: ${{ vars.CAPMONSTER_CLIENT_KEY }}
+          envkey_REDIS_DB: ${{ vars.REDIS_DB }}
+          envkey_REDIS_HOST: ${{ vars.REDIS_HOST }}
+          envkey_REDIS_PASSWORD: ${{ vars.REDIS_PASSWORD }}
+          envkey_REDIS_PORT: ${{ vars.REDIS_PORT }}
           file_name: .env
 
 
