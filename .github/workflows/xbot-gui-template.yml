@@ -46,7 +46,7 @@ jobs:
           - platform: "rust-windows"
             os: "windows"
             arch: "x86_64"
-            args: ${{ inputs.buildStage == 'dev' && '-d -f dev --config ./src-tauri/tauri.conf.dev.json' || inputs.buildStage == 'beta' && '-d -f dev --config ./src-tauri/tauri.conf.beta.json' || '' }}
+            args: ${{ inputs.buildStage == 'dev' && '-f dev --config ./src-tauri/tauri.conf.dev.json' || inputs.buildStage == 'beta' && '-d -f dev --config ./src-tauri/tauri.conf.beta.json' || '' }}
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -61,16 +61,29 @@ jobs:
         uses: actions/github-script@v7
         env:
           TAURI_VERSION: ${{ inputs.tauriVersion }}
+          BUILD_STAGE: ${{ inputs.buildStage }}
         with:
           result-encoding: json
           script: |
             const version = require('./package.json').version
             const tauriVersion = process.env.TAURI_VERSION
+            const buildStage = process.env.BUILD_STAGE
+
+            let configJsonPath = "./src-tauri/tauri.conf.json"
+
+            if (buildStage === "dev") {
+              configJsonPath = "./src-tauri/tauri.conf.dev.json"
+            } else if (buildStage === "beta") {
+              configJsonPath = "./src-tauri/tauri.conf.beta.json"
+            }
+
+
+
             let productName = ""
             if (tauriVersion === "1") {
-              productName = require('./src-tauri/tauri.conf.json').package.productName
+              productName = require(configJsonPath).package.productName
             } else {
-              productName = require('./src-tauri/tauri.conf.json').productName
+              productName = require(configJsonPath).productName
             }
 
             const linuxFileAppName  = productName
@@ -149,7 +162,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
         with:
           args: ${{ matrix.args }}
-
+      
       - name: Upload Artifact (上传构建产物)
         uses: actions/upload-artifact@v4
         if: success() && matrix.os == 'windows'
@@ -198,6 +211,7 @@ jobs:
         env:
           VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
           PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
+          BUILD_STAGE: ${{ inputs.buildStage }}
         with:
           result-encoding: json
           script: |
@@ -205,6 +219,7 @@ jobs:
 
             const version = process.env.VERSION
             const productName = process.env.PRODUCT_NAME
+            const buildStage = process.env.BUILD_STAGE
 
             console.log(fs.readdirSync(`./releases`))
             const releases = fs.readdirSync(`./releases/${productName}`)
@@ -222,7 +237,7 @@ jobs:
               pub_date: new Date().toISOString(),
               platforms: {
                 "windows-x86_64": {
-                  url: `https://xbot.s3.amazonaws.com/xbot-gui/${productName}/${version}-${inputs.buildStage}/${windowsApp}`,
+                  url: `https://xbot.s3.amazonaws.com/${productName}/${version}-${buildStage}/${windowsApp}`,
                   signature: windowsSigContent
                 }
               }
@@ -302,9 +317,7 @@ jobs:
             const installInfo = JSON.parse(process.env.INSTALL_INFO)
 
             const windowsUrl = `[Windows下载](${installInfo.platforms['windows-x86_64'].url})`
-            const macosUrl = `[MacOS下载](${installInfo.platforms['darwin-aarch64'].url})`
-
-            return `**🌟 更新内容**\n${updateLog}\n\n**🔗 下载链接**\n${windowsUrl}\n${macosUrl}`
+            return `**🌟 更新内容**\n${updateLog}\n\n**🔗 下载链接**\n${windowsUrl}`
 
       - name: Post Message (发送飞书 Webhook 消息)
         uses: Comori/feishu@v0.0.5
