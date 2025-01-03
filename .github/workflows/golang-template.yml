@@ -99,7 +99,7 @@ jobs:
   deploy_local:
     if: inputs.buildStage == 'beta'
     needs: golang_reuse_build
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux]
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
