@@ -104,14 +104,14 @@ jobs:
 
             - name: Upload artifact product
               if: inputs.buildStage == 'product'
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
                   path: target/x86_64-pc-windows-gnu/release/${{ inputs.packageName }}.exe
 
             - name: Upload artifact
               if: inputs.buildStage != 'product'
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
                   path: target/x86_64-pc-windows-gnu/release/${{ inputs.packageName }}.exe
@@ -172,14 +172,14 @@ jobs:
 
             - name: Download artifact product
               if: inputs.buildStage == 'product'
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
                   path: ./
 
             - name: Download artifact
               if: inputs.buildStage != 'product'
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
                   path: ./
