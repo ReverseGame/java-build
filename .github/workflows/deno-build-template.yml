@@ -40,7 +40,7 @@ jobs:
             - name: Upload executable
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.output }}.exe
+                  name: ${{ inputs.output }}-${{ github.sha }}
                   path: ${{ inputs.output }}.exe
         outputs:
             hash: ${{ steps.calculate_md5.outputs.HASH }}
@@ -51,7 +51,7 @@ jobs:
             - name: download artifact
               uses: actions/download-artifact@v4
               with:
-                  name: ${{ inputs.output }}.exe
+                  name: ${{ inputs.output }}-${{ github.sha }}
                   path: ./
             - name: 上传到 s3
               uses: keithweaver/aws-s3-github-action@v1.0.0
