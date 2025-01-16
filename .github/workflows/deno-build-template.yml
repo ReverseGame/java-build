@@ -19,7 +19,7 @@ on:
 
 jobs:
     build:
-        runs-on: rust-windows
+        runs-on: rust-zig
 
         steps:
             - name: Checkout repository
