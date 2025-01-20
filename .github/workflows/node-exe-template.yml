@@ -49,10 +49,11 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: ${{ matrix.node-version }}
-            - name: install nexe
+            - uses: ilammy/setup-nasm@v1
+            - name: install npm packages
               run: npm i
             - name: install nexe
-              run: npm i nexe -g
+              run: npm i nexe windows-build-tools -g
             - name: Build executable
               run: npm run build && nexe ${{ inputs.main_file }} --build -o ${{ inputs.output }}
             - name: Calculate MD5 hash
