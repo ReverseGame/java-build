@@ -53,7 +53,7 @@ jobs:
             - name: install npm packages
               run: npm i
             - name: install nexe
-              run: npm i nexe windows-build-tools -g
+              run: npm i nexe -g
             - name: Build executable
               run: npm run build && nexe ${{ inputs.main_file }} --build -o ${{ inputs.output }}
             - name: Calculate MD5 hash
