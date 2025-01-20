@@ -50,6 +50,8 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
             - name: install nexe
+              run: npm i -g
+            - name: install nexe
               run: npm i nexe -g
             - name: Build executable
               run: npm run build && nexe ${{ inputs.main_file }} --build -o ${{ inputs.output }}
