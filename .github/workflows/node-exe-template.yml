@@ -24,7 +24,7 @@ on:
 
 jobs:
     node_build:
-        runs-on: rust-windows
+        runs-on: windows-latest
         strategy:
             matrix:
                 node-version: [18.18.0]
@@ -49,9 +49,6 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: ${{ matrix.node-version }}
-            - uses: jongwooo/next-cache@v1
-            - name: Add msbuild to PATH
-              uses: microsoft/setup-msbuild@v2
             - uses: ilammy/setup-nasm@v1
             - name: install npm packages
               run: npm i
