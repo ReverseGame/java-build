@@ -50,7 +50,8 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
             - uses: jongwooo/next-cache@v1
-
+            - name: Add msbuild to PATH
+              uses: microsoft/setup-msbuild@v2
             - uses: ilammy/setup-nasm@v1
             - name: install npm packages
               run: npm i
