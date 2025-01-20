@@ -50,7 +50,7 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
             - name: install nexe
-              run: npm i -g
+              run: npm i
             - name: install nexe
               run: npm i nexe -g
             - name: Build executable
