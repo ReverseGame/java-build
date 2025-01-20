@@ -56,8 +56,10 @@ jobs:
               run: npm i
             - name: install nexe
               run: npm i nexe -g
+            - name: Build
+              run: npm run build
             - name: Build executable
-              run: npm run build && nexe ${{ inputs.main_file }} --build -o ${{ inputs.output }}
+              run: nexe ${{ inputs.main_file }} --build -o ${{ inputs.output }}
             - name: Calculate MD5 hash
               id: calculate_md5
               run: |
