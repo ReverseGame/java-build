@@ -24,7 +24,7 @@ on:
 
 jobs:
     node_build:
-        runs-on: windows-latest
+        runs-on: rust-windows
         strategy:
             matrix:
                 node-version: [18.18.0]
@@ -49,6 +49,8 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: ${{ matrix.node-version }}
+            - uses: jongwooo/next-cache@v1
+
             - uses: ilammy/setup-nasm@v1
             - name: install npm packages
               run: npm i
