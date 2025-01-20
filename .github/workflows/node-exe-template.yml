@@ -24,7 +24,7 @@ on:
 
 jobs:
     node_build:
-        runs-on: windows-latest
+        runs-on: node-windows
         strategy:
             matrix:
                 node-version: [18.18.0]
@@ -45,15 +45,8 @@ jobs:
                               text: github action
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - uses: actions/checkout@v4
-            - name: Use Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v3
-              with:
-                  node-version: ${{ matrix.node-version }}
-            - uses: ilammy/setup-nasm@v1
             - name: install npm packages
               run: npm i
-            - name: install nexe
-              run: npm i nexe -g
             - name: Build
               run: npm run build
             - name: Build executable
