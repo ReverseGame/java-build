@@ -46,7 +46,7 @@ jobs:
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - uses: actions/checkout@v4
             - name: install npm packages
-              run: npm i
+              run: npm i -f
             - name: Build
               run: npm run build
             - name: create path
