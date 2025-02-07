@@ -19,10 +19,14 @@ on:
         required: false
         type: string
         default: ''
-      dockerFile:
+      dockerfile:
         required: false
         type: string
         default: 'Dockerfile'
+      k8sfile:
+        required: false
+        type: string
+        default: 'k8s'
       projectPrefix:
         required: true
         type: string
@@ -174,7 +178,7 @@ jobs:
         uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}k8s-${{ inputs.buildStage }}.yaml || true
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: znl1087/kubectl@master
         with:
@@ -233,7 +237,7 @@ jobs:
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}k8s-${{ inputs.buildStage }}.yaml || true
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: steebchen/kubectl@v2.0.0
         with:
@@ -301,7 +305,7 @@ jobs:
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}
-          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}k8s-${{ inputs.buildStage }}.yaml
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
       - name: apply
         uses: ianbelcher/eks-kubectl-action@master
         with:
