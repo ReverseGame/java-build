@@ -111,10 +111,11 @@ jobs:
 
       - name: Build Release
         run: cargo build --release --bin ${{ inputs.packageName }}
+      - name: show target
+        run: ls -l target/release/ 
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
-
           registry: ${{ secrets.dockerUrl }}
           username: ${{ secrets.dockerUsername }}
           password: ${{ secrets.dockerPassword }}
@@ -123,7 +124,7 @@ jobs:
         with:
           push: true
           context: ${{ inputs.workDir }}
-          file: ${{ inputs.workDir }}/${{ inputs.dockerFile }}-${{ inputs.buildStage }}
+          file: ${{ inputs.workDir }}/${{ inputs.dockerfile }}-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
       - name: post success message
         if: always()
