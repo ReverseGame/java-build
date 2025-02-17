@@ -87,6 +87,11 @@ jobs:
           envkey_NEXT_PUBLIC_WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
           envkey_NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           path: .env
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
