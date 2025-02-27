@@ -64,7 +64,8 @@ jobs:
             - name: Rust setup
               uses: dtolnay/rust-toolchain@master
               with:
-                  toolchain: x86_64-unknown-linux-musl
+                  target: ${{inputs.target}}
+                  toolchain: stable
 
             - name: Build Product Release
               run: cargo build --release ${{ inputs.target != '' && format('--target {0}', inputs.target) || '' }} --bin ${{ inputs.packageName }}
