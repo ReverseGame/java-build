@@ -27,6 +27,10 @@ on:
                 required: false
                 type: string
                 default: ""
+            install:
+                required: false
+                type: string
+                default: ""
 
         secrets:
             webhookFeishu:
@@ -60,7 +64,9 @@ jobs:
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - name: Checkout repository
               uses: actions/checkout@v3
-
+            - name: install musl-tools
+              if: inputs.install != ''
+              run: sudo apt update && sudo apt install ${{ inputs.install }} -y
             - name: Rust setup
               uses: dtolnay/rust-toolchain@master
               with:
