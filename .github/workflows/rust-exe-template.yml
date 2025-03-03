@@ -16,6 +16,9 @@ on:
             awsRegion:
                 required: true
                 type: string
+            bucket:
+                required: true
+                type: string
         secrets:
             webhookFeishu:
                 required: true
@@ -24,7 +27,7 @@ on:
             awsSecretKey:
                 required: false
             # updateApi:
-                # required: false
+            # required: false
 
 jobs:
     build_rust:
@@ -58,14 +61,14 @@ jobs:
             - name: get cargo version
               id: version
               run: |
-                $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
-                echo "::set-output name=version::$($version)"
-                Write-Output "version=$($version)" >> $Env:GITHUB_OUTPUT
+                  $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
+                  echo "::set-output name=version::$($version)"
+                  Write-Output "version=$($version)" >> $Env:GITHUB_OUTPUT
               shell: powershell
 
             - name: test output
               run: |
-                Write-Host "version = " ${{ steps.version.outputs.version }}
+                  Write-Host "version = " ${{ steps.version.outputs.version }}
               shell: powershell
 
             - name: Rust setup
@@ -184,7 +187,7 @@ jobs:
               with:
                   command: cp
                   source: ./${{ inputs.packageName }}.exe
-                  destination: s3://xbot/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                  destination: s3://${{ inputs.bucket }}/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -196,29 +199,11 @@ jobs:
               with:
                   command: cp
                   source: ./${{ inputs.packageName }}.exe
-                  destination: s3://xbot/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
+                  destination: s3://${{ inputs.bucket }}/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
                   flags: --acl public-read
-
-            # - name: update version
-            #   if: inputs.buildStage != 'dev' && inputs.buildStage != 'product'
-            #   uses: fjogeleit/http-request-action@v1
-            #   with:
-            #       url: ${{ secrets.updateApi }}/version/update
-            #       method: "POST"
-            #       customHeaders: '{"Content-Type": "application/json"}'
-            #       data: '{"platform": "${{ needs.build_rust.outputs.os }}", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
-
-            # - name: update download
-            #   if: inputs.buildStage == 'product' 
-            #   uses: fjogeleit/http-request-action@v1
-            #   with:
-            #       url: ${{ secrets.updateApi }}/${{ needs.build_rust.outputs.os }}/update
-            #       method: "POST"
-            #       customHeaders: '{"Content-Type": "application/json"}'
-            #       data: '{"link": "https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
 
             - name: post success message
               if: inputs.buildStage != 'product'
@@ -242,7 +227,7 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
+                              text: https://${{ inputs.bucket }}.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
 
             - name: post success message
               if: inputs.buildStage == 'product'
@@ -266,4 +251,4 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://xbot.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                              text: https://${{ inputs.bucket }}.s3.amazonaws.com/${{ needs.build_rust.outputs.os }}/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe

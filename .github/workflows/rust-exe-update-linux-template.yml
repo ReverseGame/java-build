@@ -16,6 +16,9 @@ on:
             awsRegion:
                 required: true
                 type: string
+            bucket:
+                required: true
+                type: string
         secrets:
             webhookFeishu:
                 required: true
@@ -55,15 +58,14 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v3
 
-
             - name: get cargo version
               id: version
               run: |
-                echo "::set-output name=version::$(grep -m 1 -o 'version = ".*"' ./cli/Cargo.toml | sed 's/version = "\(.*\)"/\1/')"
+                  echo "::set-output name=version::$(grep -m 1 -o 'version = ".*"' ./cli/Cargo.toml | sed 's/version = "\(.*\)"/\1/')"
 
             - name: test output
               run: |
-                echo "version = " ${{ steps.version.outputs.version }}
+                  echo "version = " ${{ steps.version.outputs.version }}
             - name: install mingw64
               run: sudo apt-get install mingw-w64 -y
             - name: install clang
@@ -73,7 +75,7 @@ jobs:
             - name: Rust setup
               uses: dtolnay/rust-toolchain@stable
               with:
-                targets: x86_64-pc-windows-gnu
+                  targets: x86_64-pc-windows-gnu
 
             - name: Install cargo-llvm-cov
               uses: taiki-e/install-action@cargo-llvm-cov
@@ -192,7 +194,7 @@ jobs:
               with:
                   command: cp
                   source: ./${{ inputs.packageName }}.exe
-                  destination: s3://xbot/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                  destination: s3://${{ inputs.bucket }}/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -204,7 +206,7 @@ jobs:
               with:
                   command: cp
                   source: ./${{ inputs.packageName }}.exe
-                  destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
+                  destination: s3://${{ inputs.bucket }}/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -226,7 +228,7 @@ jobs:
                   url: ${{ secrets.updateApi }}/windows/update
                   method: "POST"
                   customHeaders: '{"Content-Type": "application/json"}'
-                  data: '{"link": "https://xbot.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
+                  data: '{"link": "https://${{ inputs.bucket }}.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
 
             - name: post success message
               if: inputs.buildStage != 'product'
@@ -250,7 +252,7 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://xbot.s3.amazonaws.com/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
+                              text: https://${{ inputs.bucket }}.s3.amazonaws.com/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
 
             - name: post success message
               if: inputs.buildStage == 'product'
@@ -274,4 +276,4 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://xbot.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                              text: https://${{ inputs.bucket }}.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
