@@ -23,6 +23,9 @@ on:
       releaseFeishuWebhook:
         required: false
         type: string
+      bucket:
+        required: true
+        type: string
     secrets:
       awsAccessKey:
         required: true
@@ -213,6 +216,7 @@ jobs:
           VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
           PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
           BUILD_STAGE: ${{ inputs.buildStage }}
+          BUCKET: ${{ inputs.bucket }}
         with:
           result-encoding: json
           script: |
@@ -221,6 +225,7 @@ jobs:
             const version = process.env.VERSION
             const productName = process.env.PRODUCT_NAME
             const buildStage = process.env.BUILD_STAGE
+            const bucket = process.env.BUCKET
 
             console.log(fs.readdirSync(`./releases`))
             const releases = fs.readdirSync(`./releases/${productName}`)
@@ -238,7 +243,7 @@ jobs:
               pub_date: new Date().toISOString(),
               platforms: {
                 "windows-x86_64": {
-                  url: `https://xbot.s3.amazonaws.com/${productName}/${version}-${buildStage}/${windowsApp}`,
+                  url: `https://${bucket}.s3.amazonaws.com/${productName}/${version}-${buildStage}/${windowsApp}`,
                   signature: windowsSigContent
                 }
               }
@@ -253,7 +258,7 @@ jobs:
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           source: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/
-          destination: s3://xbot/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ fromJson(needs.build-tauri.outputs.product-info).version }}-${{ inputs.buildStage }}/
+          destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ fromJson(needs.build-tauri.outputs.product-info).version }}-${{ inputs.buildStage }}/
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}

@@ -16,6 +16,9 @@ on:
             awsRegion:
                 required: true
                 type: string
+            bucket:
+                required: true
+                type: string
         secrets:
             webhookFeishu:
                 required: true
@@ -185,7 +188,7 @@ jobs:
               with:
                   command: cp
                   source: ./${{ inputs.packageName }}.exe
-                  destination: s3://xbot/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                  destination: s3://${{ inputs.bucket }}/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -197,7 +200,7 @@ jobs:
               with:
                   command: cp
                   source: ./${{ inputs.packageName }}.exe
-                  destination: s3://xbot/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe
+                  destination: s3://${{ inputs.bucket }}/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -219,7 +222,7 @@ jobs:
                   url: ${{ secrets.updateApi }}/windows/update
                   method: "POST"
                   customHeaders: '{"Content-Type": "application/json"}'
-                  data: '{"link": "https://xbot.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
+                  data: '{"link": "https://${{ inputs.bucket }}.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
 
             - name: post success message
               if: inputs.buildStage != 'product'
@@ -243,7 +246,7 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://xbot.s3.amazonaws.com/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe
+                              text: https://${{ inputs.bucket }}.s3.amazonaws.com/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe
 
             - name: post success message
               if: inputs.buildStage == 'product'
@@ -267,4 +270,4 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://xbot.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+                              text: https://${{ inputs.bucket }}.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe

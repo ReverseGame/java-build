@@ -9,6 +9,9 @@ on:
             main_file:
                 required: true
                 type: string
+            bucket:
+                required: true
+                type: string
         secrets:
             webhookFeishu:
                 required: true
@@ -60,7 +63,7 @@ jobs:
               with:
                   command: cp
                   source: ${{ inputs.output }}.exe
-                  destination: s3://xbot/${{ inputs.output }}/${{ inputs.output }}-${{ needs.build.outputs.hash }}.exe
+                  destination: s3://${{ inputs.bucket }}/${{ inputs.output }}/${{ inputs.output }}-${{ needs.build.outputs.hash }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: us-east-1
@@ -87,4 +90,4 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://xbot.s3.amazonaws.com/${{inputs.output}}/${{ inputs.output }}-${{  needs.build.outputs.hash }}.exe
+                              text: https://${{ inputs.bucket }}.s3.amazonaws.com/${{inputs.output}}/${{ inputs.output }}-${{  needs.build.outputs.hash }}.exe
