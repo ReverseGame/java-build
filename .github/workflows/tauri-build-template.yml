@@ -263,6 +263,17 @@ jobs:
           aws_region: ${{ inputs.awsRegion }}
           flags: --acl public-read --recursive
 
+      - name: Upload install.json to S3
+        if: success()
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          source: ./releases/install.json
+          destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/install.json
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read
+
       - name: Get Update Log
         id: update-log
         uses: actions/github-script@v7
@@ -333,5 +344,5 @@ jobs:
           cardkit-id: AAq15syMYoq55
           cardkit-version: 0.0.3
           content: |
-            title=${{ fromJson(needs.build-tauri.outputs.product-info).productName }} ${{ fromJson(needs.build-tauri.outputs.product-info).version }} 测试版本
+            title=${{ fromJson(needs.build-tauri.outputs.product-info).productName }} ${{ fromJson(needs.build-tauri.outputs.product-info).version }} 发布成功
             content=${{ steps.message-content.outputs.result }}
