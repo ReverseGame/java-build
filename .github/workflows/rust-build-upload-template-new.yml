@@ -75,9 +75,6 @@ jobs:
             - name: Install cargo-llvm-cov
               uses: taiki-e/install-action@cargo-llvm-cov
 
-            - name: Install openssl
-              run: sudo apt-get install libssl-dev libsasl2-dev pkg-config -y
-
             - name: Build Product Release
               run: cargo build --release ${{ inputs.target != '' && format('--target {0}', inputs.target) || '' }} --bin ${{ inputs.packageName }}
             - name: post success message
