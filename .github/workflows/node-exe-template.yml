@@ -14,6 +14,9 @@ on:
             bucket:
                 required: true
                 type: string
+            buildArgs:
+                required: false
+                type: string
         secrets:
             webhookFeishu:
                 required: true
@@ -52,9 +55,9 @@ jobs:
             - name: create path
               run: mkdir dist\src\public
             - name: copy public
-              run: xcopy src\public\ dist\src\public\ /E 
+              run: xcopy src\public\ dist\src\public\ /E
             - name: Build executable
-              run: nexe ${{ inputs.main_file }} --build -o ${{ inputs.output }}
+              run: nexe ${{ inputs.main_file }} ${{ inputs.buildArgs }} --build -o ${{ inputs.output }}
             - name: Calculate MD5 hash
               id: calculate_md5
               run: |
