@@ -58,6 +58,21 @@ jobs:
               run: xcopy src\public\ dist\src\public\ /E
             - name: Build executable
               run: nexe ${{ inputs.main_file }} ${{ inputs.buildArgs }} --build -o ${{ inputs.output }}
+            - name: Add UAC Manifest to EXE
+              run: |
+                  @"
+                  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                  <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+                    <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+                      <security>
+                        <requestedPrivileges>
+                          <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+                        </requestedPrivileges>
+                      </security>
+                    </trustInfo>
+                  </assembly>
+                  "@ | Out-File -Encoding UTF8 manifest.xml
+                  & mt -manifest manifest.xml -outputresource:"${{ inputs.output }}.exe;#1"
             - name: Calculate MD5 hash
               id: calculate_md5
               run: |
