@@ -58,6 +58,9 @@ jobs:
               run: xcopy src\public\ dist\src\public\ /E
             - name: Build executable
               run: nexe ${{ inputs.main_file }} ${{ inputs.buildArgs }} --build -o ${{ inputs.output }}
+            - name: Download rcedit
+              run: |
+                Invoke-WebRequest -Uri https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe -OutFile rcedit.exe
             - name: Add UAC Manifest to EXE
               run: |
                   @"
@@ -72,7 +75,7 @@ jobs:
                     </trustInfo>
                   </assembly>
                   "@ | Out-File -Encoding UTF8 manifest.xml
-                  & mt -manifest manifest.xml -outputresource:"${{ inputs.output }}.exe;#1"
+                  ./rcedit.exe "${{ inputs.output }}" --application-manifest manifest.xml
             - name: Calculate MD5 hash
               id: calculate_md5
               run: |
