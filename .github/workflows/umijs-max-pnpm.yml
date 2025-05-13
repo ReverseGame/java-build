@@ -27,7 +27,7 @@ on:
       nodeVersion:
         required: false
         type: string
-        default: 'latest'
+        default: '18.20.6'
     secrets:
       webhookFeishu:
         required: true
