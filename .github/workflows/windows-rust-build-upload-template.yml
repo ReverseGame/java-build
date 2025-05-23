@@ -1,0 +1,133 @@
+name: Rust CI (Windows)
+
+on:
+  workflow_call:
+    inputs:
+      projectName:
+        required: true
+        type: string
+      packageName:
+        required: true
+        type: string
+      buildStage:
+        required: true
+        type: string
+        default: ""
+      awsRegion:
+        required: true
+        type: string
+      bucket:
+        required: true
+        type: string
+      target:
+        required: false
+        type: string
+        default: ""
+      s3Path:
+        required: false
+        type: string
+        default: ""
+      install:
+        required: false
+        type: string
+        default: ""
+
+    secrets:
+      webhookFeishu:
+        required: true
+      awsAccessKey:
+        required: false
+      awsSecretKey:
+        required: false
+
+jobs:
+  build_rust:
+    runs-on: windows-latest
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始构建(Windows)
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Chocolatey (if needed)
+        if: inputs.install != ''
+        run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+      - name: Install dependencies
+        if: inputs.install != ''
+        run: choco install ${{ inputs.install }} -y
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@master
+        with:
+          target: ${{inputs.target}}
+          toolchain: stable
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Install MSVC build tools
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build Product Release
+        run: cargo build --release ${{ inputs.target != '' && format('--target {0}', inputs.target) || '' }} --bin ${{ inputs.packageName }}
+
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!(Windows)
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Upload to S3
+        if: inputs.buildStage == 'product'
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: cp
+          source: ./target${{ inputs.target != '' && format('/{0}', inputs.target) || '' }}/release/${{ inputs.packageName }}.exe
+          destination: s3://${{ inputs.bucket }}${{ inputs.s3Path }}/${{ inputs.packageName }}.exe
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read
+
+      - name: Upload to S3
+        if: inputs.buildStage != 'product'
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: cp
+          source: ./target${{ inputs.target != '' && format('/{0}', inputs.target) || '' }}/release/${{ inputs.packageName }}.exe
+          destination: s3://${{ inputs.bucket }}${{inputs.s3Path}}/${{inputs.buildStage}}/${{ inputs.packageName }}-${{ github.sha }}.exe
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read
