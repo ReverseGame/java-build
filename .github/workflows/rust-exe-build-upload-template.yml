@@ -68,11 +68,11 @@ jobs:
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - name: Checkout repository
               uses: actions/checkout@v3
-            - name: Rust setup
-              uses: dtolnay/rust-toolchain@master
-              with:
-                  target: ${{inputs.target}}
-                  toolchain: stable
+            # - name: Rust setup
+            #   uses: dtolnay/rust-toolchain@master
+            #   with:
+            #       target: ${{inputs.target}}
+            #       toolchain: stable
             - name: Build Product Release
               run: cargo build --release ${{ inputs.target != '' && format('--target {0}', inputs.target) || '' }} --bin ${{ inputs.packageName }} ${{ inputs.feature != '' && format('--features {0}', inputs.feature) || '' }}
             - name: Upload artifact product
