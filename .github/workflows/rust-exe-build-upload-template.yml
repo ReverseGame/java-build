@@ -138,7 +138,7 @@ jobs:
               with:
                   command: cp
                   source: ./${{ inputs.packageName }}.exe
-                  destination: s3://${{ inputs.bucket }}${{ inputs.s3Path }}/${{inputs.buildStage}}/${{ inputs.packageName }}
+                  destination: s3://${{ inputs.bucket }}${{ inputs.s3Path }}/${{inputs.buildStage}}/${{ inputs.packageName }}-${{ github.sha }}.exe
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -165,4 +165,4 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://${{inputs.bucket}}.s3.amazonaws.com${{inputs.s3Path}}/${{ inputs.buildStage == 'product' && format('{0}', inputs.packageName) || format('{0}/{1}-{2}', inputs.buildStage, inputs.packageName, github.sha )}}
+                              text: https://${{inputs.bucket}}.s3.amazonaws.com${{inputs.s3Path}}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
