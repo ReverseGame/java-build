@@ -46,7 +46,7 @@ on:
 
 jobs:
   node_build:
-    runs-on: node-windows
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [ 20.x ]
@@ -183,7 +183,7 @@ jobs:
   deploy_product:
     if: inputs.buildStage == 'product' && !inputs.eks
     needs: node_build
-    runs-on: node-windows
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [ 18.x ]
@@ -245,7 +245,7 @@ jobs:
   deploy_eks_product:
     if: inputs.buildStage == 'product' && inputs.eks
     needs: node_build
-    runs-on: node-windows
+    runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
       aws_region: ${{ inputs.awsRegion }}
@@ -311,7 +311,7 @@ jobs:
   deploy_eks_beta:
     if: inputs.buildStage == 'beta' && inputs.eks
     needs: node_build
-    runs-on: node-windows
+    runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
       aws_region: ${{ inputs.awsRegion }}
