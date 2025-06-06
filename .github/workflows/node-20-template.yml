@@ -46,7 +46,7 @@ on:
 
 jobs:
   node_build:
-    runs-on: ubuntu-latest
+    runs-on: node-windows
     strategy:
       matrix:
         node-version: [ 20.x ]
