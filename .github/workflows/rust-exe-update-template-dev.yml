@@ -53,23 +53,24 @@ jobs:
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - name: Checkout repository
               uses: actions/checkout@v3
-            - name: Map Z drive
-              continue-on-error: true
-              run: |
-                net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
-              shell: cmd
-            - uses: actions-rs/toolchain@v1
-              continue-on-error: true
-              with:
-                toolchain: stable
-                override: true
+#            - name: Map Z drive
+#              continue-on-error: true
+#              run: |
+#                net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
+#              shell: cmd
+#            - uses: actions-rs/toolchain@v1
+#              continue-on-error: true
+#              with:
+#                toolchain: stable
+#                override: true
             - uses: Swatinem/rust-cache@v2
               with:
+                workspaces: "."
                 cache-all-crates: true
                 prefix-key: "win-build"
-            - name: Install compression tools
-              continue-on-error: true
-              run: choco install gzip -y
+#            - name: Install compression tools
+#              continue-on-error: true
+#              run: choco install gzip -y
             - name: get cargo version
               id: version
               run: |
