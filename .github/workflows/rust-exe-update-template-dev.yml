@@ -63,8 +63,8 @@ jobs:
                 workspaces: 'Z:\\target -> target'
                 cache-all-crates: true
                 prefix-key: "win-build"
-            - name: Install compression tools
-              run: choco install gzip -y
+#            - name: Install compression tools
+#              run: choco install gzip -y
             - name: get cargo version
               id: version
               run: |
