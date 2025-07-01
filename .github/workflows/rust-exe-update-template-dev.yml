@@ -32,6 +32,8 @@ on:
 jobs:
     build_rust:
         runs-on: rust-windows
+        env:
+          CARGO_HOME: "Z:\\.cargo"
         steps:
             - name: post messasge
               uses: foxundermoon/feishu-action@v2
