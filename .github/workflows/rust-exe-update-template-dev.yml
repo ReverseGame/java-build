@@ -54,11 +54,18 @@ jobs:
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - name: Checkout repository
               uses: actions/checkout@v3
+            - name: Map Z drive
+              run: |
+                net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
+                mkdir Z:\target
+              shell: cmd
             - uses: Swatinem/rust-cache@v2
               with:
                 workspaces: 'Z:\\target -> target'
+                cache-all-crates: true
                 prefix-key: "win-build"
-
+            - name: Install compression tools
+              run: choco install gzip -y
             - name: get cargo version
               id: version
               run: |
