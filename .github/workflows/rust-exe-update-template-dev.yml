@@ -58,10 +58,10 @@ jobs:
 #              run: |
 #                net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
 #              shell: cmd
-            - uses: actions-rs/toolchain@v1
-              with:
-                toolchain: stable
-                override: true
+#            - uses: actions-rs/toolchain@v1
+#              with:
+#                toolchain: stable
+#                override: true
             - uses: Swatinem/rust-cache@v2
               with:
                 workspaces: 'Z:\\target -> target'
