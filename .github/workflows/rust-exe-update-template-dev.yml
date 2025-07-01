@@ -54,15 +54,10 @@ jobs:
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             - name: Checkout repository
               uses: actions/checkout@v3
-
-            - uses: actions-rs/toolchain@v1
-              with:
-                toolchain: stable
             - uses: Swatinem/rust-cache@v2
-            - run: cargo install cargo-chef
-            - run: cargo chef prepare --recipe-path recipe.json
-            - run: cargo chef cook --recipe-path recipe.json
-            # - uses: ilammy/setup-nasm@v1
+              with:
+                workspaces: 'Z:\\target -> target'
+                prefix-key: "win-build"
 
             - name: get cargo version
               id: version
