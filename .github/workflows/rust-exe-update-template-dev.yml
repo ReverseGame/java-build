@@ -58,8 +58,11 @@ jobs:
 #          sparse-checkout: |
 #             target
 #          fetch-depth: 0
-      # - uses: ilammy/setup-nasm@v1
-
+      - name: Map Z drive
+        continue-on-error: true
+        run: |
+          net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
+        shell: powershell
       - name: get cargo version
         id: version
         run: |
