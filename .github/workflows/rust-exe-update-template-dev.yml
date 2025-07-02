@@ -31,7 +31,7 @@ on:
 
 jobs:
     build_rust:
-        runs-on: [default, DESKTOP-4KF2CEM]
+        runs-on: DESKTOP-4KF2CEM
         steps:
             - name: post messasge
               uses: foxundermoon/feishu-action@v2
