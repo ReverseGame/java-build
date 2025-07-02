@@ -31,7 +31,7 @@ on:
 
 jobs:
     build_rust:
-        runs-on: rust-windows
+        runs-on: [FXTL1]
         steps:
             - name: post messasge
               uses: foxundermoon/feishu-action@v2
@@ -63,24 +63,14 @@ jobs:
 #              with:
 #                toolchain: stable
 #                override: true
-#            - uses: Swatinem/rust-cache@v2
-#              with:
-#                workspaces: "."
-#                cache-all-crates: true
-#                prefix-key: "win-build"
+            - uses: Swatinem/rust-cache@v2
+              with:
+                workspaces: "."
+                cache-all-crates: true
+                prefix-key: "win-build"
 #            - name: Install compression tools
 #              continue-on-error: true
 #              run: choco install gzip -y
-            - name: Set up cache
-              uses: actions/cache@v4
-              with:
-                  path: |
-                    $CARGO_HOME/registry
-                    $CARGO_HOME/git
-                    target
-                  key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-                  restore-keys: |
-                    Z:
             - name: get cargo version
               id: version
               run: |
