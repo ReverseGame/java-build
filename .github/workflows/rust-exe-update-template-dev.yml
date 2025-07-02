@@ -54,10 +54,10 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          sparse-checkout: |
-             target
-          fetch-depth: 0
+#        with:
+#          sparse-checkout: |
+#             target
+#          fetch-depth: 0
 #      - name: Map Z drive
 #        continue-on-error: true
 #        run: |
