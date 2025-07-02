@@ -31,7 +31,7 @@ on:
 
 jobs:
     build_rust:
-        runs-on: DESKTOP-4KF2CEM
+        runs-on: rust-windows
         steps:
             - name: post messasge
               uses: foxundermoon/feishu-action@v2
