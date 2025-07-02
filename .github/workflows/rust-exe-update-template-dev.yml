@@ -52,24 +52,24 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      - name: Checkout repository
-        uses: actions/checkout@v3
+#      - name: Checkout repository
+#        uses: actions/checkout@v3
 #        with:
 #          sparse-checkout: |
 #             target
 #          fetch-depth: 0
-#      - name: Map Z drive
-#        continue-on-error: true
-#        run: |
-#          net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
-#        shell: powershell
-#      - name: Git Pull
-#        continue-on-error: true
-#        run: |
-#          cd Z:\reverse-bot-rs
-#          git config --global --add safe.directory '%(prefix)///FXTL_ANHUA/nfs/reverse-bot-rs'
-#          git branch
-#          git pull
+      - name: Map Z drive
+        continue-on-error: true
+        run: |
+          net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
+        shell: powershell
+      - name: Git Pull
+        continue-on-error: true
+        run: |
+          cd Z:\reverse-bot-rs
+          git config --global --add safe.directory '%(prefix)///FXTL_ANHUA/nfs/reverse-bot-rs'
+          git branch
+          git pull
       - name: get cargo version
         id: version
         run: |
