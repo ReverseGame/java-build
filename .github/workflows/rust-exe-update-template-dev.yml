@@ -63,12 +63,15 @@ jobs:
         run: |
           net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
         shell: powershell
-      - name: get cargo version
-        id: version
+      - name: Git Pull
+        continue-on-error: true
         run: |
           cd Z:\reverse-bot-rs
           git config --global --add safe.directory '%(prefix)///FXTL_ANHUA/nfs/reverse-bot-rs'
           git pull
+      - name: get cargo version
+        id: version
+        run: |
           $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
           echo "::set-output name=version::$($version)"
           Write-Output "version=$($version)" >> $Env:GITHUB_OUTPUT
