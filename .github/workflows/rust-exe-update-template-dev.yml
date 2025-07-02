@@ -51,8 +51,8 @@ jobs:
                             - tag: a
                               text: github action
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            - name: Checkout repository
-              uses: actions/checkout@v3
+#            - name: Checkout repository
+#              uses: actions/checkout@v3
 #            - name: Map Z drive
 #              continue-on-error: true
 #              run: |
@@ -74,6 +74,8 @@ jobs:
             - name: get cargo version
               id: version
               run: |
+                  cd Z:\reverse-bot-rs
+                  git pull
                   $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
                   echo "::set-output name=version::$($version)"
                   Write-Output "version=$($version)" >> $Env:GITHUB_OUTPUT
