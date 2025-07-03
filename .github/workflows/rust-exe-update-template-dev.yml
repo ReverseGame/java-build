@@ -86,7 +86,7 @@ jobs:
         shell: powershell
       - name: Get parent path
         id: path_target
-        shell: pwsh
+        shell: powershell
         run: echo "PARENT_PATH=$(Split-Path -Parent (Get-Location).Path)" >> $GITHUB_OUTPUT
 
       - name: Upload artifact product
