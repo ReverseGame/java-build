@@ -77,6 +77,7 @@ jobs:
         run: |
           $env:RUSTFLAGS='--cfg env="beta"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
           $dest = C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release;if(!(Test-Path $dest)){New-Item -ItemType Directory -Path $dest}; Move-Item ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe -Force
+          ls C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release
         shell: powershell
       - name: Build Release
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
