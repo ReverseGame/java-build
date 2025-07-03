@@ -52,28 +52,19 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-#      - name: Checkout repository
-#        uses: actions/checkout@v3
-#        with:
-#          sparse-checkout: |
-#             target
-#          fetch-depth: 0
-      - name: Map Z drive
-        continue-on-error: true
-        run: |
-          net use Z: \\FXTL_ANHUA\nfs 74123 /user:ninecent /persistent:yes
-        shell: powershell
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          sparse: true
+          path: "target"
       - name: Git Pull
         continue-on-error: true
         run: |
-          cd Z:\reverse-bot-rs
-          git config --global --add safe.directory '%(prefix)///FXTL_ANHUA/nfs/reverse-bot-rs'
           git branch
           git pull
       - name: get cargo version
         id: version
         run: |
-          cd Z:\reverse-bot-rs
           $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
           echo "::set-output name=version::$($version)"
           Write-Output "version=$($version)" >> $Env:GITHUB_OUTPUT
@@ -110,9 +101,7 @@ jobs:
         run: $env:RUSTFLAGS='--cfg env="beta"';cargo build --release
       - name: Build Release
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
-        run: |
-          cd Z:\reverse-bot-rs
-          cargo build --release
+        run: cargo build --release
 
       - name: Upload artifact product
         if: inputs.buildStage == 'product'
