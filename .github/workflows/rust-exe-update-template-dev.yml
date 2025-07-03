@@ -70,20 +70,20 @@ jobs:
         shell: powershell
       - name: Build Product Release
         if: inputs.buildStage == 'product'
-        run: $env:RUSTFLAGS='--cfg env="product"';cargo build --release  --target-dir target/product
+        run: $env:RUSTFLAGS='--cfg env="product"';cargo build --release  --target-dir target/${{ inputs.buildStage }}
       - name: Build Beta Release
         if: inputs.buildStage == 'beta'
-        run: $env:RUSTFLAGS='--cfg env="beta"';cargo build --release --target-dir target/beta
+        run: $env:RUSTFLAGS='--cfg env="beta"';cargo build --release --target-dir target/${{ inputs.buildStage }}
       - name: Build Release
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
-        run: cargo build --release --target-dir target/dev
+        run: cargo build --release --target-dir target/${{ inputs.buildStage }}
 
       - name: Upload artifact product
         if: inputs.buildStage == 'product'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-          path: target/product/release/${{ inputs.packageName }}.exe
+          path: target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
 
       - name: Upload artifact
         if: inputs.buildStage != 'product'
