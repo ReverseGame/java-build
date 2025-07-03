@@ -70,7 +70,7 @@ jobs:
         shell: powershell
       - name: Build Product Release
         if: inputs.buildStage == 'product'
-        run: $env:RUSTFLAGS='--cfg env="product"';cargo build --release  --target-dir target/${{ inputs.buildStage }}
+        run: $env:RUSTFLAGS='--cfg env="product"';cargo build --release --target-dir target/${{ inputs.buildStage }}
       - name: Build Beta Release
         if: inputs.buildStage == 'beta'
         run: $env:RUSTFLAGS='--cfg env="beta"';cargo build --release --target-dir target/${{ inputs.buildStage }}
