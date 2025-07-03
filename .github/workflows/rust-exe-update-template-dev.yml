@@ -70,22 +70,16 @@ jobs:
         if: inputs.buildStage == 'product'
         run: |
           $env:RUSTFLAGS='--cfg env="product"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          $dest = C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release;if(!(Test-Path $dest)){New-Item -ItemType Directory -Path $dest}; Move-Item ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe -Force
-        shell: powershell
       - name: Build Beta Release
         if: inputs.buildStage == 'beta'
         run: |
           $env:RUSTFLAGS='--cfg env="beta"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          $dest = C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release;if(!(Test-Path $dest)){New-Item -ItemType Directory -Path $dest}; Move-Item ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe -Force
-          ls C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release
-        shell: powershell
       - name: Build Release
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
         run: |
           cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-        shell: powershell
-      - name: Get parent path
-        id: path_target
+      - name: Get target parent path
+        id: target_parent_path
         shell: powershell
         run: |
           $parentPath = Split-Path -Parent (Get-Location).Path
@@ -96,14 +90,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-          path: ${{ steps.path_target.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          path: ${{ steps.target_parent_path.outputs.PARENT_PATH }}/target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
 
       - name: Upload artifact
         if: inputs.buildStage != 'product'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
-          path: ${{ steps.path_target.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          path: ${{ steps.target_parent_path.outputs.PARENT_PATH }}/target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
 
       - name: post success message
         if: always()
