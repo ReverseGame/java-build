@@ -81,14 +81,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-          path: target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
+          path: */target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
 
       - name: Upload artifact
         if: inputs.buildStage != 'product'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
-          path: target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
+          path: */target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
 
       - name: post success message
         if: always()
