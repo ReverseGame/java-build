@@ -55,8 +55,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          sparse: true
-          path: target
+          clean: false
       - name: get cargo version
         id: version
         run: |
