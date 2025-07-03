@@ -70,17 +70,17 @@ jobs:
         if: inputs.buildStage == 'product'
         run: |
           $env:RUSTFLAGS='--cfg env="product"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mv ../target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe C:/${{ inputs.projectName }}/target/${{ inputs.buildStage }}/release -Force
+          mv ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release -Force
       - name: Build Beta Release
         if: inputs.buildStage == 'beta'
         run: |
           $env:RUSTFLAGS='--cfg env="beta"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mv ../target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe C:/${{ inputs.projectName }}/target/${{ inputs.buildStage }}/release -Force
+          mv ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release -Force
       - name: Build Release
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
         run: |
           cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mv ../target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe C:/${{ inputs.projectName }}/target/${{ inputs.buildStage }}/release -Force
+          mv ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release -Force
 
       - name: Upload artifact product
         if: inputs.buildStage == 'product'
