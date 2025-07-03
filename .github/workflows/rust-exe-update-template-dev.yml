@@ -83,18 +83,18 @@ jobs:
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
         run: |
           cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          ls ..\target\${{ inputs.buildStage }}\release
-          $dest = "C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release\";if(!(Test-Path $dest)){New-Item -ItemType Directory -Path $dest}
-          mv ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe -Force
-          ls C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release
         shell: powershell
+      - name: Get parent path
+        id: path_target
+        shell: pwsh
+        run: echo "PARENT_PATH=$(Split-Path -Parent (Get-Location).Path)" >> $GITHUB_OUTPUT
 
       - name: Upload artifact product
         if: inputs.buildStage == 'product'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-          path: C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          path: ${{ steps.path_target.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
 
       - name: Upload artifact
         if: inputs.buildStage != 'product'
