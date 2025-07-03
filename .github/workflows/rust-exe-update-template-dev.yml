@@ -55,11 +55,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          path: 'target'
+          clean: false
       - name: get cargo version
         id: version
         run: |
-          git branch -a
           $version = Select-String -Path cli/Cargo.toml -Pattern '^version = "(.*)"$' | ForEach-Object { $_.Matches.Groups[1].Value }
           echo "::set-output name=version::$($version)"
           Write-Output "version=$($version)" >> $Env:GITHUB_OUTPUT
