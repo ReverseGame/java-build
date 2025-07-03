@@ -101,7 +101,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
-          path: C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          path: ${{ steps.path_target.outputs.PARENT_PATH }}\\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
 
       - name: post success message
         if: always()
