@@ -79,25 +79,31 @@ jobs:
           $dest = C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release;if(!(Test-Path $dest)){New-Item -ItemType Directory -Path $dest}; Move-Item ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe -Force
           ls C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release
         shell: powershell
-      - name: Build Release
-        if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
-        run: |
-          cargo build --release --target-dir ../target/${{ inputs.buildStage }}
+#      - name: Build Release
+#        if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
+#        run: |
+#          cargo build --release --target-dir ../target/${{ inputs.buildStage }}
+#        shell: powershell
+      - name: Get parent path
+        id: path_target
         shell: powershell
+        run: |
+          $parentPath = Split-Path -Parent (Get-Location).Path
+          echo "PARENT_PATH=$parentPath" >> $env:GITHUB_OUTPUT
 
       - name: Upload artifact product
         if: inputs.buildStage == 'product'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-          path: ${{ (Split-Path -Parent (Get-Location).Path) }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          path: ${{ steps.path_target.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
 
       - name: Upload artifact
         if: inputs.buildStage != 'product'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
-          path: ${{ (Split-Path -Parent (Get-Location).Path) }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          path: ${{ steps.path_target.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
 
       - name: post success message
         if: always()
