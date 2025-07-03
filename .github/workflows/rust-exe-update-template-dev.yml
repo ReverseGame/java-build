@@ -54,10 +54,10 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          sparse-checkout: |
-            target/
-          sparse-checkout-disable: false
+#        with:
+#          sparse-checkout: |
+#            target/
+#          sparse-checkout-disable: false
       - name: get cargo version
         id: version
         run: |
