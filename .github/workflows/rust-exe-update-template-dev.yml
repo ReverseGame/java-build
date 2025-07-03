@@ -55,8 +55,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          sparse: true
-          path: "target"
+          sparse-checkout: |
+            target/
+          sparse-checkout-disable: false
       - name: Git Pull
         continue-on-error: true
         run: |
