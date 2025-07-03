@@ -70,19 +70,19 @@ jobs:
         if: inputs.buildStage == 'product'
         run: |
           $env:RUSTFLAGS='--cfg env="product"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mklink /D ../target target
+          mklink /D target/${{ inputs.buildStage }} ../target/${{ inputs.buildStage }}
         shell: cmd
       - name: Build Beta Release
         if: inputs.buildStage == 'beta'
         run: |
           $env:RUSTFLAGS='--cfg env="beta"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mklink /D ../target target
+          mklink /D target/${{ inputs.buildStage }} ../target/${{ inputs.buildStage }}
         shell: cmd
       - name: Build Release
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
         run: |
           cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mklink /D ../target target
+          mklink /D target/${{ inputs.buildStage }} ../target/${{ inputs.buildStage }}
         shell: cmd
 
       - name: Upload artifact product
