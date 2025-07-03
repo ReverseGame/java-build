@@ -70,19 +70,19 @@ jobs:
         if: inputs.buildStage == 'product'
         run: |
           $env:RUSTFLAGS='--cfg env="product"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mklink C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          mklink C:/${{ inputs.projectName }}/target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe ../target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
         shell: cmd
       - name: Build Beta Release
         if: inputs.buildStage == 'beta'
         run: |
           $env:RUSTFLAGS='--cfg env="beta"';cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mklink C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          mklink C:/${{ inputs.projectName }}/target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe ../target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
         shell: cmd
       - name: Build Release
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
         run: |
           cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          mklink C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          mklink C:/${{ inputs.projectName }}/target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe ../target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
         shell: cmd
 
       - name: Upload artifact product
@@ -90,14 +90,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-          path: C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          path: C:/${{ inputs.projectName }}/target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
 
       - name: Upload artifact
         if: inputs.buildStage != 'product'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
-          path: C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe
+          path: C:/${{ inputs.projectName }}/target/${{ inputs.buildStage }}/release/${{ inputs.packageName }}.exe
 
       - name: post success message
         if: always()
