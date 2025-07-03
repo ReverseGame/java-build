@@ -82,7 +82,7 @@ jobs:
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
         run: |
           cargo build --release --target-dir ../target/${{ inputs.buildStage }}
-          $dest = C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release;if(!(Test-Path $dest)){New-Item -ItemType Directory -Path $dest}; Move-Item ..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe -Force
+          $dest = "C:\${{ inputs.projectName }}\target\${{ inputs.buildStage }}\release";if(!(Test-Path $dest)){New-Item -ItemType Directory -Path $dest}; Move-Item "..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe" -Force
         shell: powershell
 
       - name: Upload artifact product
