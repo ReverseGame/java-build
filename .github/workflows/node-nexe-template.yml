@@ -1,0 +1,129 @@
+name: Node exe CI
+on:
+    workflow_call:
+        inputs:
+            projectName:
+                required: true
+                type: string
+            output:
+                required: true
+                type: string
+            main_file:
+                required: true
+                type: string
+            bucket:
+                required: true
+                type: string
+            buildArgs:
+                required: false
+                type: string
+        secrets:
+            webhookFeishu:
+                required: true
+            awsAccessKey:
+                required: true
+            awsSecretKey:
+                required: true
+
+jobs:
+    node_build:
+        runs-on: node-windows
+        steps:
+            - name: post message
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 开始构建
+                          content:
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - uses: actions/checkout@v4
+            - name: install npm packages
+              run: pnpm i
+            - name: Build
+              run: pnpm build
+            - name: Build executable
+              run: pnpm nexe
+            - name: Download rcedit
+              run: |
+                Invoke-WebRequest -Uri https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe -OutFile rcedit.exe
+            - name: Add UAC Manifest to EXE
+              run: |
+                  @"
+                  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                  <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+                    <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+                      <security>
+                        <requestedPrivileges>
+                          <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+                        </requestedPrivileges>
+                      </security>
+                    </trustInfo>
+                  </assembly>
+                  "@ | Out-File -Encoding UTF8 manifest.xml
+                  ./rcedit.exe "${{ inputs.output }}.exe" --application-manifest manifest.xml
+            - name: Calculate MD5 hash
+              id: calculate_md5
+              run: |
+                  $md5 = Get-FileHash -Path ${{ inputs.output }}.exe -Algorithm SHA256
+                  Write-Output "HASH=$($md5.Hash)" >> $Env:GITHUB_OUTPUT
+            - name: compress
+              run: |
+                  Compress-Archive -Path ${{ inputs.output }}.exe -DestinationPath ${{ inputs.output }}.zip
+            - name: Upload executable
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ inputs.output }}-${{ steps.calculate_md5.outputs.HASH }}
+                  path: ${{ inputs.output }}.zip
+        outputs:
+            hash: ${{ steps.calculate_md5.outputs.HASH }}
+
+    upload:
+        runs-on: ubuntu-latest
+        needs: node_build
+        steps:
+            - name: download artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: ${{ inputs.output }}-${{ needs.node_build.outputs.hash }}
+                  path: ./
+            - name: 上传到 s3
+              uses: keithweaver/aws-s3-github-action@v1.0.0
+              with:
+                  command: cp
+                  source: ${{ inputs.output }}.zip
+                  destination: s3://${{ inputs.bucket }}/${{ inputs.output }}/${{ inputs.output }}-${{ needs.node_build.outputs.hash }}.zip
+                  aws_access_key_id: ${{ secrets.awsAccessKey }}
+                  aws_secret_access_key: ${{ secrets.awsSecretKey }}
+                  aws_region: us-east-1
+                  flags: --acl public-read
+            - name: post success message
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.output }} 上传结果 ${{ job.status }}!
+                          content:
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                          - - tag: text
+                              text: 'SHA256: '
+                            - tag: text
+                              text: ${{ needs.node_build.outputs.hash }}
+                          - - tag: text
+                              text: '下载链接: '
+                            - tag: text
+                              text: https://${{inputs.bucket}}.s3.amazonaws.com/${{inputs.output}}/${{ inputs.output }}-${{  needs.node_build.outputs.hash }}.zip
