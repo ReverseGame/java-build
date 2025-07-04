@@ -5,7 +5,10 @@ on:
             projectName:
                 required: true
                 type: string
-            output:
+            outputPath:
+                required: true
+                type: string
+            outputFileName:
                 required: true
                 type: string
             main_file:
@@ -53,7 +56,7 @@ jobs:
             - name: Build
               run: npm run build
             - name: Build executable
-              run: nexe ${{ inputs.main_file }} ${{ inputs.buildArgs }} --build -o ${{ inputs.output }}
+              run: nexe ${{ inputs.buildArgs }}
             - name: Download rcedit
               run: |
                 Invoke-WebRequest -Uri https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe -OutFile rcedit.exe
@@ -71,20 +74,20 @@ jobs:
                     </trustInfo>
                   </assembly>
                   "@ | Out-File -Encoding UTF8 manifest.xml
-                  ./rcedit.exe "${{ inputs.output }}.exe" --application-manifest manifest.xml
+                  ./rcedit.exe "${{ inputs.outputPath }}/${{ inputs.outputFileName }}.exe" --application-manifest manifest.xml
             - name: Calculate MD5 hash
               id: calculate_md5
               run: |
-                  $md5 = Get-FileHash -Path ${{ inputs.output }}.exe -Algorithm SHA256
+                  $md5 = Get-FileHash -Path ${{ inputs.outputPath }}/${{ inputs.outputFileName }}.exe -Algorithm SHA256
                   Write-Output "HASH=$($md5.Hash)" >> $Env:GITHUB_OUTPUT
             - name: compress
               run: |
-                  Compress-Archive -Path ${{ inputs.output }}.exe -DestinationPath ${{ inputs.output }}.zip
+                  Compress-Archive -Path ${{ inputs.outputPath }}/${{ inputs.outputFileName }}.exe -DestinationPath ${{ inputs.outputPath }}/${{ inputs.outputFileName }}.zip
             - name: Upload executable
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.output }}-${{ steps.calculate_md5.outputs.HASH }}
-                  path: ${{ inputs.output }}.zip
+                  name: ${{ inputs.outputFileName }}-${{ steps.calculate_md5.outputs.HASH }}
+                  path: ${{ inputs.outputFileName }}.zip
         outputs:
             hash: ${{ steps.calculate_md5.outputs.HASH }}
 
@@ -95,14 +98,14 @@ jobs:
             - name: download artifact
               uses: actions/download-artifact@v4
               with:
-                  name: ${{ inputs.output }}-${{ needs.node_build.outputs.hash }}
+                  name: ${{ inputs.outputFileName }}-${{ needs.node_build.outputs.hash }}
                   path: ./
             - name: 上传到 s3
               uses: keithweaver/aws-s3-github-action@v1.0.0
               with:
                   command: cp
-                  source: ${{ inputs.output }}.zip
-                  destination: s3://${{ inputs.bucket }}/${{ inputs.output }}/${{ inputs.output }}-${{ needs.node_build.outputs.hash }}.zip
+                  source: ${{ inputs.outputFileName }}.zip
+                  destination: s3://${{ inputs.bucket }}/${{ inputs.outputPath }}/${{ inputs.outputFileName }}-${{ needs.node_build.outputs.hash }}.zip
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: us-east-1
@@ -115,7 +118,7 @@ jobs:
                   content: |
                       post:
                         zh_cn:
-                          title: ${{ inputs.output }} 上传结果 ${{ job.status }}!
+                          title: ${{ inputs.outputFileName }} 上传结果 ${{ job.status }}!
                           content:
                           - - tag: text
                               text: '部署链接: '
@@ -129,4 +132,4 @@ jobs:
                           - - tag: text
                               text: '下载链接: '
                             - tag: text
-                              text: https://${{inputs.bucket}}.s3.amazonaws.com/${{inputs.output}}/${{ inputs.output }}-${{  needs.node_build.outputs.hash }}.zip
+                              text: https://${{inputs.bucket}}.s3.amazonaws.com/${{inputs.outputFileName}}/${{ inputs.outputFileName }}-${{  needs.node_build.outputs.hash }}.zip
