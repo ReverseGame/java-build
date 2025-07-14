@@ -39,7 +39,7 @@ jobs:
         with:
           token: ${{ secrets.triggerRepoToken }}
           repository: ${{ input.triggerRemoteRepo }}
-          event-type: trigger-build
+          event-type: ${{ input.eventType }}
       - name: post messasge
         uses: foxundermoon/feishu-action@v2
         with:
