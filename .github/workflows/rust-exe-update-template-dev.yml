@@ -34,6 +34,12 @@ jobs:
     runs-on: rust-windows
 
     steps:
+      - name: Trigger Remote Build
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.triggerRepoToken }}
+          repository: ${{ input.triggerRemoteRepo }}
+          event-type: trigger-build
       - name: post messasge
         uses: foxundermoon/feishu-action@v2
         with:
