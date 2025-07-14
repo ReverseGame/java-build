@@ -19,6 +19,12 @@ on:
       bucket:
         required: true
         type: string
+      triggerRemoteRepo:
+        required: true
+        type: string
+      eventType:
+        required: true
+        type: string
     secrets:
       webhookFeishu:
         required: true
