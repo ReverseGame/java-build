@@ -34,6 +34,8 @@ on:
         required: false
       updateApi:
         required: true
+      triggerRepoToken:
+        required: true
 
 jobs:
   build_rust:
