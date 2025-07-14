@@ -44,8 +44,8 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.triggerRepoToken }}
-          repository: ${{ input.triggerRemoteRepo }}
-          event-type: ${{ input.eventType }}
+          repository: ${{ inputs.triggerRemoteRepo }}
+          event-type: ${{ inputs.eventType }}
       - name: post messasge
         uses: foxundermoon/feishu-action@v2
         with:
