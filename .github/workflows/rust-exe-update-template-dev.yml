@@ -19,6 +19,12 @@ on:
       bucket:
         required: true
         type: string
+      triggerRemoteRepo:
+        required: true
+        type: string
+      eventType:
+        required: true
+        type: string
     secrets:
       webhookFeishu:
         required: true
@@ -34,6 +40,12 @@ jobs:
     runs-on: rust-windows
 
     steps:
+      - name: Trigger Remote Build
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.triggerRepoToken }}
+          repository: ${{ input.triggerRemoteRepo }}
+          event-type: ${{ input.eventType }}
       - name: post messasge
         uses: foxundermoon/feishu-action@v2
         with:
