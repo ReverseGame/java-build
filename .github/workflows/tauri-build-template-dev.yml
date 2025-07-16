@@ -1,4 +1,4 @@
-name: Tauri CI
+name: Tauri CI dev
 
 on:
   workflow_call:
