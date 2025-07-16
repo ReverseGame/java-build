@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Trigger Remote Build
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.triggerRepoToken }}
           repository: ${{ inputs.triggerRemoteRepo }}
