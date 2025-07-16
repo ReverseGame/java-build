@@ -56,7 +56,6 @@ jobs:
       - name: Echo client_payload
         run: |
           echo "client_payload sha: ${{ github.event.client_payload.sha }}"
-
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
         with:
@@ -68,7 +67,6 @@ jobs:
         run: |
           echo "主仓库SHA: $(git rev-parse HEAD)"
           git submodule foreach --recursive 'echo "$name: $(git rev-parse HEAD)"'
-
       - name: Get Project Info
         id: product-info
         uses: actions/github-script@v7
