@@ -38,9 +38,10 @@ on:
         required: true
 
 jobs:
-  build_rust:
-    runs-on: rust-windows
-
+  Dispatch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Trigger Remote Build
         uses: peter-evans/repository-dispatch@v3
@@ -48,6 +49,9 @@ jobs:
           token: ${{ secrets.triggerRepoToken }}
           repository: ${{ inputs.triggerRemoteRepo }}
           event-type: ${{ inputs.eventType }}
+  build_rust:
+    runs-on: rust-windows
+    steps:
       - name: post messasge
         uses: foxundermoon/feishu-action@v2
         with:
