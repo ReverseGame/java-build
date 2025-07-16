@@ -49,6 +49,7 @@ jobs:
           token: ${{ secrets.triggerRepoToken }}
           repository: ${{ inputs.triggerRemoteRepo }}
           event-type: ${{ inputs.eventType }}
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
   build_rust:
     runs-on: rust-windows
     steps:
