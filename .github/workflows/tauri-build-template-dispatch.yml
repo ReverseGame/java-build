@@ -1,4 +1,4 @@
-name: Tauri CI dev
+name: Tauri CI Dispatch
 
 on:
   workflow_call:
@@ -60,9 +60,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.patToken }}
-          ref: ${{ github.event.client_payload.sha }}
           submodules: recursive
-          fetch-depth: 0
       - name: Print submodule SHAs
         run: |
           echo "主仓库SHA: $(git rev-parse HEAD)"
