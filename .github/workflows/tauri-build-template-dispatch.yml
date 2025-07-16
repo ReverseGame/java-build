@@ -64,6 +64,7 @@ jobs:
       - name: Print submodule SHAs
         run: |
           echo "主仓库SHA: $(git rev-parse HEAD)"
+          git submodule foreach --recursive 'if ["$name" == "$(basename ${{ github.event.client_payload.repository }})"]; then git checkout ${{ github.event.client_payload.sha }}'
           git submodule foreach --recursive 'echo "$name: $(git rev-parse HEAD)"'
       - name: Get Project Info
         id: product-info
