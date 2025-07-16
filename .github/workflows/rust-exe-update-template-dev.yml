@@ -43,6 +43,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Echo github
+        run: |
+          echo "GITHUB_SHA: ${{ github.sha }}"
+          echo "GITHUB_REF: ${{ github.ref }}"
+          echo "GITHUB_REPOSITORY: ${{ github.repository }}"
+
       - name: Trigger Remote Build
         uses: peter-evans/repository-dispatch@v3
         with:
