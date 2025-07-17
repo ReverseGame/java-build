@@ -74,13 +74,13 @@ jobs:
       - name: Increment version
         id: version
         run: |
-          VERSION_FILE=package.json
-          CURRENT_VERSION=$(grep -Po '"version": "\K[^"]*' $VERSION_FILE)
-          IFS='.' read -ra PARTS <<< "$CURRENT_VERSION"
-          PARTS^1^=$((PARTS^1^+1))
-          NEW_VERSION="${PARTS}.${PARTS^2^}.${PARTS^1^}"
-          sed -i "s/\"version\": \".*\"/\"version\": \"$NEW_VERSION\"/" $VERSION_FILE
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          $content = Get-Content package.json -Raw
+          $version = ($content | ConvertFrom-Json).version
+          $parts = $version.Split('.')
+          $parts^1^ = [int]$parts^1^ + 1
+          $newVersion = $parts -join '.'
+          $content = $content -replace """version"": ""$version""", """version"": ""$newVersion"""
+          Set-Content -Path package.json -Value $content
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
