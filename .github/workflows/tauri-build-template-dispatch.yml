@@ -64,10 +64,10 @@ jobs:
           fetch-depth: 0
       - name: Update submodule SHAs
         run: |
-          echo "主仓库SHA: $(git rev-parse HEAD)"
-          git submodule foreach --recursive 'if [ "$name" = "reverse-bot-rs" ]; then
-            git checkout ${{ github.event.client_payload.sha }} || exit 1 
-          fi'
+          echo "master SHA: $(git rev-parse HEAD)"
+          cd reverse-bot-rs
+          git checkout ${{ github.event.client_payload.sha }}
+          cd ..
           git submodule foreach --recursive 'echo "$name: $(git rev-parse HEAD)"'
       - name: Get Project Info
         id: product-info
