@@ -61,16 +61,14 @@ jobs:
         with:
           token: ${{ secrets.patToken }}
           submodules: recursive
+          fetch-depth: 0
 
       - name: Update submodule SHAs
         run: |
           echo "master SHA: $(git rev-parse HEAD)"
-          cd reverse-bot-rs
-          git checkout ${{ github.event.client_payload.sha }} --force
-          cd ..
-      - name: Printf submodule SHAs
-        run: |
+          git -C reverse-bot-rs checkout ${{ github.event.client_payload.sha }} --force
           git submodule foreach --recursive 'echo "$name: $(git rev-parse HEAD)"'
+
 #      - name: Get Project Info
 #        id: product-info
 #        uses: actions/github-script@v7
