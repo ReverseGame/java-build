@@ -70,8 +70,8 @@ jobs:
       - name: Update submodule SHAs
         run: |
           echo "master SHA: $(git rev-parse HEAD)"
-          git -C $(basename ${{ github.event.client_payload.repository }}) fetch origin ${{ github.event.client_payload.sha }}
-          git -C $(basename ${{ github.event.client_payload.repository }}) checkout ${{ github.event.client_payload.sha }} --force
+          git -C $(Split-Path ${{ github.event.client_payload.repository }} -Leaf)  fetch origin ${{ github.event.client_payload.sha }}
+          git -C $(Split-Path ${{ github.event.client_payload.repository }} -Leaf) checkout ${{ github.event.client_payload.sha }} --force
 
       - name: Increment version
         id: version
