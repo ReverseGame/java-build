@@ -66,7 +66,7 @@ jobs:
         run: |
           echo "master SHA: $(git rev-parse HEAD)"
           cd reverse-bot-rs
-          git checkout ${{ github.event.client_payload.sha }}
+          git checkout ${{ github.event.client_payload.sha }} --force
           cd ..
       - name: Printf submodule SHAs
         run: |
