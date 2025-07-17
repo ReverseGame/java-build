@@ -59,7 +59,7 @@ jobs:
       - name: Echo client_payload
         run: |
           echo "client_payload sha: ${{ github.event.client_payload.sha }}"
-          echo "client_payload pr_title: ${{ github.event.client_payload.pr_title }}"
+          echo "client_payload pr_title: ${{ github.event.client_payload.message }}"
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
         with:
@@ -87,8 +87,8 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           add-paths: package.json
-          commit-message: '[create-pull-request] ${{ github.event.client_payload.pr_title }}'
-          title: '[create-pull-request] ${{ github.event.client_payload.pr_title }}'
+          commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
+          title: '[create-pull-request] ${{ github.event.client_payload.message }}'
 
 
 #      - name: Get Project Info
