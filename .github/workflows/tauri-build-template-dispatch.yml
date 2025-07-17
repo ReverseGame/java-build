@@ -56,12 +56,12 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-#      - name: Update submodule SHAs
-#        run: |
-#          echo "master SHA: $(git rev-parse HEAD)"
-#          $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
-#          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
-#          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
+      #      - name: Update submodule SHAs
+      #        run: |
+      #          echo "master SHA: $(git rev-parse HEAD)"
+      #          $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
+      #          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
+      #          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
 
       - name: Increment version
         id: version
@@ -82,14 +82,18 @@ jobs:
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
 
-      - name: Post Message (发送飞书 Webhook 消息)
-        uses: Comori/feishu@v0.0.5
-        if: success() && ${{ inputs.buildFeishuWebhook }}
+      - name: post success message
+        uses: foxundermoon/feishu-action@v2
         with:
-          webhook-url: ${{ inputs.buildFeishuWebhook }}
-          msg-type: cardkit
-          cardkit-id: AAq15syMYoq55
-          cardkit-version: 0.0.3
+          url: ${{ inputs.buildFeishuWebhook }}
+          msg_type: post
           content: |
-            title= Xbot-gui PR待审核
-            url = ${{ steps.cpr.outputs.pull-request-url }}
+            post:
+              zh_cn:
+                title: Xbot-gui PR待审核
+                content:
+                - - tag: text
+                    text: 'PR链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ steps.cpr.outputs.pull-request-url }}
