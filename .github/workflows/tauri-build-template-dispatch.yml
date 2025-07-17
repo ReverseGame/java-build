@@ -95,5 +95,5 @@ jobs:
                 - - tag: text
                     text: 'PR链接: '
                   - tag: a
-                    text: github action
+                    text: 点击跳转
                     href: ${{ steps.cpr.outputs.pull-request-url }}
