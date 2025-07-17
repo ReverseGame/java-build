@@ -67,7 +67,6 @@ jobs:
         run: |
           echo "master SHA: $(git rev-parse HEAD)"
           git -C reverse-bot-rs checkout ${{ github.event.client_payload.sha }} --force
-          git submodule foreach --recursive 'echo "$name: $(git rev-parse HEAD)"'
 
 #      - name: Get Project Info
 #        id: product-info
