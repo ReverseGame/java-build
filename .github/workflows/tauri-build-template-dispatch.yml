@@ -59,6 +59,7 @@ jobs:
       - name: Echo client_payload
         run: |
           echo "client_payload sha: ${{ github.event.client_payload.sha }}"
+          echo "client_payload pr_title: ${{ github.event.client_payload.pr_title }}"
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
         with:
@@ -77,7 +78,7 @@ jobs:
           $content = Get-Content package.json -Raw
           $version = ($content | ConvertFrom-Json).version
           $parts = $version.Split('.')
-          $parts[1] = [int]$parts[1] + 1
+          $parts[2] = [int]$parts[2] + 1
           $newVersion = $parts -join '.'
           $content = $content -replace """version"": ""$version""", """version"": ""$newVersion"""
           Set-Content -Path package.json -Value $content
@@ -86,8 +87,8 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           add-paths: package.json
-          commit-message: '[create-pull-request] automated change'
-          title: 'Changes by create-pull-request action'
+          commit-message: '[create-pull-request] ${{ github.event.client_payload.pr_title }}'
+          title: '[create-pull-request] ${{ github.event.client_payload.pr_title }}'
 
 
 #      - name: Get Project Info

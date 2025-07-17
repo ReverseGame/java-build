@@ -48,6 +48,7 @@ jobs:
           echo "GITHUB_SHA: ${{ github.sha }}"
           echo "GITHUB_REF: ${{ github.ref }}"
           echo "GITHUB_REPOSITORY: ${{ github.repository }}"
+          echo "PR Title: ${{ github.event.pull_request.title }}"
 
       - name: Trigger Remote Build
         uses: peter-evans/repository-dispatch@v3
@@ -55,7 +56,7 @@ jobs:
           token: ${{ secrets.triggerRepoToken }}
           repository: ${{ inputs.triggerRemoteRepo }}
           event-type: ${{ inputs.eventType }}
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "repository": "${{ github.repository }}"}'
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "repository": "${{ github.repository }}", "pr_title": "${{ github.event.pull_request.title }}" }'
 #  build_rust:
 #    runs-on: rust-windows
 #    steps:
