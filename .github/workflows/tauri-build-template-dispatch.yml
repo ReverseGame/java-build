@@ -67,10 +67,11 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-#      - name: Update submodule SHAs
-#        run: |
-#          echo "master SHA: $(git rev-parse HEAD)"
-#          git -C reverse-bot-rs checkout ${{ github.event.client_payload.sha }} --force
+      - name: Update submodule SHAs
+        run: |
+          echo "master SHA: $(git rev-parse HEAD)"
+          git -C reverse-bot-rs fetch origin ${{ github.event.client_payload.sha }}
+          git -C reverse-bot-rs checkout ${{ github.event.client_payload.sha }} --force
 
       - name: Increment version
         id: version
