@@ -155,10 +155,10 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ vars.tauriPrivateKey }}
-          TAURI_KEY_PASSWORD: ${{ vars.tauriKeyPassword }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ vars.tauriPrivateKey }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.tauriKeyPassword }}
+          TAURI_PRIVATE_KEY: ${{ vars.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ vars.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           RUSTFLAGS: '--cfg env="${{ inputs.buildStage }}"'
         with:
           args: ${{ matrix.args }}
