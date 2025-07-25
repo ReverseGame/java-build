@@ -31,10 +31,6 @@ on:
         required: true
       awsSecretKey:
         required: true
-      tauriPrivateKey:
-        required: true
-      tauriKeyPassword:
-        required: true
       patToken:
         required: true
 
@@ -159,10 +155,10 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
-          TAURI_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.tauriPrivateKey }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.tauriKeyPassword }}
+          TAURI_PRIVATE_KEY: ${{ vars.tauriPrivateKey }}
+          TAURI_KEY_PASSWORD: ${{ vars.tauriKeyPassword }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ vars.tauriPrivateKey }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.tauriKeyPassword }}
           RUSTFLAGS: '--cfg env="${{ inputs.buildStage }}"'
         with:
           args: ${{ matrix.args }}
