@@ -1,0 +1,99 @@
+name: Tauri CI Dispatch
+
+on:
+  workflow_call:
+    inputs:
+      buildStage:
+        required: true
+        type: string
+      nodeVersion:
+        required: false
+        type: string
+        default: "lts/*"
+      tauriVersion:
+        required: false
+        type: string
+        default: "1"
+      awsRegion:
+        required: true
+        type: string
+      buildFeishuWebhook:
+        required: false
+        type: string
+      releaseFeishuWebhook:
+        required: false
+        type: string
+      bucket:
+        required: true
+        type: string
+    secrets:
+      awsAccessKey:
+        required: true
+      awsSecretKey:
+        required: true
+      tauriPrivateKey:
+        required: true
+      tauriKeyPassword:
+        required: true
+      patToken:
+        required: true
+
+jobs:
+  pr_new_version:
+    runs-on: "rust-windows"
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Echo client_payload
+        run: |
+          echo "client_payload sha: ${{ github.event.client_payload.sha }}"
+          echo "client_payload pr_title: ${{ github.event.client_payload.message }}"
+      - name: Checkout code (检出代码)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.patToken }}
+          submodules: recursive
+          fetch-depth: 0
+
+      #      - name: Update submodule SHAs
+      #        run: |
+      #          echo "master SHA: $(git rev-parse HEAD)"
+      #          $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
+      #          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
+      #          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
+
+      - name: Increment version
+        id: version
+        run: |
+          $content = Get-Content package.json -Raw
+          $version = ($content | ConvertFrom-Json).version
+          $parts = $version.Split('.')
+          $parts[2] = [int]$parts[2] + 1
+          $newVersion = $parts -join '.'
+          $content = $content -replace """version"": ""$version""", """version"": ""$newVersion"""
+          Set-Content -Path package.json -Value $content
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        with:
+          add-paths: package.json
+          commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
+          title: '[create-pull-request] ${{ github.event.client_payload.message }}'
+
+      - name: post success message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ inputs.buildFeishuWebhook }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: Xbot-gui PR待审核
+                content:
+                - - tag: text
+                    text: 'PR链接: '
+                  - tag: a
+                    text: 点击跳转
+                    href: ${{ steps.cpr.outputs.pull-request-url }}
