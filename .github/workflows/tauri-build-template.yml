@@ -235,7 +235,7 @@ jobs:
 
             const updateData = {
               version: `v${version}`,
-              note: `v${version}`,
+              notes: `v${version}`,
               pub_date: new Date().toISOString(),
               platforms: {
                 "windows-x86_64": {
