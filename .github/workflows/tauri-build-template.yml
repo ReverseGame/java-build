@@ -171,8 +171,8 @@ jobs:
           overwrite: true
           name: windows-bundle
           path: |
-            ./src-tauri/target/release/bundle/msi/*.msi
-            ./src-tauri/target/release/bundle/msi/*.msi.sig
+            ./src-tauri/target/release/bundle/msi/*.msi.zip
+            ./src-tauri/target/release/bundle/msi/*.msi.zip.sig
 
       - name: Post Message (发送飞书 Webhook 消息)
         uses: Comori/feishu@v0.0.5
@@ -229,8 +229,8 @@ jobs:
 
 
             // windows
-            const windowsApp = releases.find(release => release.endsWith('.msi'))
-            const windowsSig = releases.find(release => release.endsWith('.msi.sig'))
+            const windowsApp = releases.find(release => release.endsWith('.msi.zip'))
+            const windowsSig = releases.find(release => release.endsWith('.msi.zip.sig'))
             const windowsSigContent = fs.readFileSync(`./releases/${productName}/${windowsSig}`, 'utf-8')
 
             const updateData = {
