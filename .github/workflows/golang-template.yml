@@ -168,7 +168,7 @@ jobs:
                             - tag: text
                               text: ${{ env.tag }}
     deploy_product:
-        if: inputs.buildStage == 'product'
+        if: inputs.buildStage == 'product' && !inputs.eks
         needs: golang_reuse_build
         runs-on: ubuntu-latest
         env:
