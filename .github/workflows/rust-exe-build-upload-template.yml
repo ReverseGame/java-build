@@ -1,0 +1,168 @@
+name: Rust CI
+
+on:
+    workflow_call:
+        inputs:
+            projectName:
+                required: true
+                type: string
+            packageName:
+                required: true
+                type: string
+            buildStage:
+                required: true
+                type: string
+                default: ""
+            awsRegion:
+                required: true
+                type: string
+            bucket:
+                required: true
+                type: string
+            target:
+                required: false
+                type: string
+                default: ""
+            feature:
+                required: false
+                type: string
+                default: ""
+            s3Path:
+                required: false
+                type: string
+                default: ""
+            install:
+                required: false
+                type: string
+                default: ""
+
+        secrets:
+            webhookFeishu:
+                required: true
+            awsAccessKey:
+                required: false
+            awsSecretKey:
+                required: false
+
+jobs:
+    build_rust:
+        runs-on: rust-windows
+        steps:
+            - name: post messasge
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 开始构建
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - name: Checkout repository
+              uses: actions/checkout@v3
+            # - name: Rust setup
+            #   uses: dtolnay/rust-toolchain@master
+            #   with:
+            #       target: ${{inputs.target}}
+            #       toolchain: stable
+            - name: Build Product Release
+              run: cargo build --release ${{ inputs.target != '' && format('--target {0}', inputs.target) || '' }} --bin ${{ inputs.packageName }} ${{ inputs.feature != '' && format('--features {0}', inputs.feature) || '' }}
+            - name: Upload artifact product
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
+                  path: target${{ inputs.target != '' && format('/{0}', inputs.target) || '' }}/release/${{ inputs.packageName }}.exe
+
+            - name: post success message
+              if: always()
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    upload:
+        strategy:
+            matrix:
+                platform: [ubuntu-latest]
+        runs-on: ${{ matrix.platform }}
+        needs: build_rust
+        steps:
+            - name: post messasge
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 开始上传
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            - name: Download artifact product
+              uses: actions/download-artifact@v4
+              with:
+                  name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
+                  path: ./
+
+            - name: Upload to S3
+              uses: keithweaver/aws-s3-github-action@v1.0.0
+              with:
+                  command: cp
+                  source: ./${{ inputs.packageName }}.exe
+                  destination: s3://${{ inputs.bucket }}${{ inputs.s3Path }}/${{inputs.buildStage}}/${{ inputs.packageName }}-${{ github.sha }}.exe
+                  aws_access_key_id: ${{ secrets.awsAccessKey }}
+                  aws_secret_access_key: ${{ secrets.awsSecretKey }}
+                  aws_region: ${{ inputs.awsRegion }}
+                  flags: --acl public-read
+
+            - name: post success message
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 上传结果 ${{ job.status }}!
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                          - - tag: text
+                              text: '下载链接: '
+                            - tag: text
+                              text: https://${{inputs.bucket}}.s3.amazonaws.com${{inputs.s3Path}}/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe

@@ -86,6 +86,8 @@ jobs:
           envkey_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
           envkey_NEXT_PUBLIC_WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
           envkey_NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          envkey_NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
+          envkey_NEXT_PUBLIC_AW: ${{ vars.NEXT_PUBLIC_AW }}
           path: .env
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3

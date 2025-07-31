@@ -24,10 +24,6 @@ on:
       clusterName:
         required: false
         type: string
-      nodeVersion:
-        required: false
-        type: string
-        default: '18.20.6'
     secrets:
       webhookFeishu:
         required: true
@@ -46,13 +42,18 @@ on:
       awsSecretKey:
         required: false
 
+
+
 jobs:
   node_build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ 20.x ]
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
-      - name: Post Message
+      - name: post message
         uses: foxundermoon/feishu-action@v2
         with:
           url: ${{ secrets.webhookFeishu }}
@@ -70,29 +71,17 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
         with:
-          version: latest
-
-      - name: Use Node.js v${{inputs.nodeVersion}}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{inputs.nodeVersion}}
-          cache: pnpm
-          cache-dependency-path: ${{ inputs.workDir }}/pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+          node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - run: yarn --frozen-lockfile
         working-directory: ${{ inputs.workDir }}
-
-      - name: Build
-        run: pnpm build:${{ inputs.buildStage }}
+      - run: yarn build:${{ inputs.buildStage }}
         working-directory: ${{ inputs.workDir }}
-
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -133,6 +122,9 @@ jobs:
     if: inputs.buildStage == 'beta' && !inputs.eks
     needs: node_build
     runs-on: Linux
+    strategy:
+      matrix:
+        node-version: [ 18.x ]
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
@@ -192,6 +184,9 @@ jobs:
     if: inputs.buildStage == 'product' && !inputs.eks
     needs: node_build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ 18.x ]
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
