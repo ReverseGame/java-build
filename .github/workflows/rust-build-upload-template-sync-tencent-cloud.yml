@@ -178,5 +178,4 @@ jobs:
                 key: ${{ inputs.key }}
                 port: ${{ inputs.port }}
                 script: |
-                    whoami
-                    ls -al
+                  echo 123 >> teste.txt
