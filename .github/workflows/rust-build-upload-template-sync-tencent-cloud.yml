@@ -3,34 +3,6 @@ name: Rust CI
 on:
     workflow_call:
         inputs:
-            projectName:
-                required: true
-                type: string
-            packageName:
-                required: true
-                type: string
-            buildStage:
-                required: true
-                type: string
-                default: ""
-            awsRegion:
-                required: true
-                type: string
-            bucket:
-                required: true
-                type: string
-            target:
-                required: false
-                type: string
-                default: ""
-            s3Path:
-                required: false
-                type: string
-                default: ""
-            install:
-                required: false
-                type: string
-                default: ""
             region:
                 required: true
                 type: string
@@ -46,127 +18,25 @@ on:
             port:
                 required: true
                 type: string
-
-        secrets:
-            webhookFeishu:
+            TENCENT_SECRET_ID:
                 required: true
-            awsAccessKey:
-                required: false
-            awsSecretKey:
-                required: false
+                type: string
+            TENCENT_SECRET_KEY:
+              required: true
+              type: string
+
 
 jobs:
     build_rust:
         runs-on: ubuntu-22.04
         steps:
-#            - name: post messasge
-#              uses: foxundermoon/feishu-action@v2
-#              with:
-#                  url: ${{ secrets.webhookFeishu }}
-#                  msg_type: post
-#                  content: |
-#                      post:
-#                        zh_cn:
-#                          title: ${{ inputs.projectName }} 开始构建
-#                          content:
-#                          - - tag: text
-#                              un_escape: true
-#                              text: '部署环境: ${{ inputs.buildStage }}'
-#                          - - tag: text
-#                              text: '部署链接: '
-#                            - tag: a
-#                              text: github action
-#                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-#            - name: Checkout repository
-#              uses: actions/checkout@v3
-#            - name: install musl-tools
-#              if: inputs.install != ''
-#              run: sudo apt update && sudo apt install ${{ inputs.install }} -y
-#            - name: Rust setup
-#              uses: dtolnay/rust-toolchain@master
-#              with:
-#                  target: ${{inputs.target}}
-#                  toolchain: stable
-#            - name: Install cargo-llvm-cov
-#              uses: taiki-e/install-action@cargo-llvm-cov
-#
-#            - name: Install openssl
-#              run: sudo apt-get install libssl-dev libsasl2-dev
-#
-#            - name: Build Product Release
-#              run: cargo build --release ${{ inputs.target != '' && format('--target {0}', inputs.target) || '' }} --bin ${{ inputs.packageName }}
-#            - name: post success message
-#              if: always()
-#              uses: foxundermoon/feishu-action@v2
-#              with:
-#                  url: ${{ secrets.webhookFeishu }}
-#                  msg_type: post
-#                  content: |
-#                      post:
-#                        zh_cn:
-#                          title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
-#                          content:
-#                          - - tag: text
-#                              un_escape: true
-#                              text: '部署环境: ${{ inputs.buildStage }}'
-#                          - - tag: text
-#                              text: '部署链接: '
-#                            - tag: a
-#                              text: github action
-#                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-#            - name: Upload to S3
-#              if: inputs.buildStage == 'product'
-#              uses: keithweaver/aws-s3-github-action@v1.0.0
-#              with:
-#                  command: cp
-#                  source: ./target${{ inputs.target != '' && format('/{0}', inputs.target) || '' }}/release/${{ inputs.packageName }}
-#                  destination: s3://${{ inputs.bucket }}${{ inputs.s3Path }}/${{ inputs.packageName }}
-#                  aws_access_key_id: ${{ secrets.awsAccessKey }}
-#                  aws_secret_access_key: ${{ secrets.awsSecretKey }}
-#                  aws_region: ${{ inputs.awsRegion }}
-#                  flags: --acl public-read
-#
-#            - name: Upload to S3
-#              if: inputs.buildStage != 'product'
-#              uses: keithweaver/aws-s3-github-action@v1.0.0
-#              with:
-#                  command: cp
-#                  source: ./target${{ inputs.target != '' && format('/{0}', inputs.target) || '' }}/release/${{ inputs.packageName }}
-#                  destination: s3://${{ inputs.bucket }}${{inputs.s3Path}}/${{inputs.buildStage}}/${{ inputs.packageName }}-${{ github.sha }}
-#                  aws_access_key_id: ${{ secrets.awsAccessKey }}
-#                  aws_secret_access_key: ${{ secrets.awsSecretKey }}
-#                  aws_region: ${{ inputs.awsRegion }}
-#                  flags: --acl public-read
-#
-#            - name: post success message
-#              uses: foxundermoon/feishu-action@v2
-#              with:
-#                  url: ${{ secrets.webhookFeishu }}
-#                  msg_type: post
-#                  content: |
-#                      post:
-#                        zh_cn:
-#                          title: ${{ inputs.projectName }} 上传结果 ${{ job.status }}!
-#                          content:
-#                          - - tag: text
-#                              un_escape: true
-#                              text: '部署环境: ${{ inputs.buildStage }}'
-#                          - - tag: text
-#                              text: '部署链接: '
-#                            - tag: a
-#                              text: github action
-#                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-#                          - - tag: text
-#                              text: '下载链接: '
-#                            - tag: text
-#                              text: https://${{inputs.bucket}}.s3.amazonaws.com${{inputs.s3Path}}/${{ inputs.buildStage == 'product' && format('{0}', inputs.packageName) || format('{0}/{1}-{2}', inputs.buildStage, inputs.packageName, github.sha )}}
             - name: 'get ips'
               uses: ReverseGame/tencent-action@v3
               id: get_ips
               with:
                 action: 'get_ips'
-                secret_id: ${{ secrets.TENCENT_SECRET_ID }}
-                secret_key: ${{ secrets.TENCENT_SECRET_KEY }}
+                secret_id: ${{ inputs.TENCENT_SECRET_ID }}
+                secret_key: ${{ inputs.TENCENT_SECRET_KEY }}
                 region: ${{ inputs.region }}
                 instance_name_prefix: ${{ inputs.instanceNamePrefix }}
             - name: echo
