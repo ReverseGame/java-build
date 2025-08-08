@@ -39,9 +39,9 @@ jobs:
                 secret_key: ${{ inputs.TENCENT_SECRET_KEY }}
                 region: ${{ inputs.region }}
                 instance_name_prefix: ${{ inputs.instanceNamePrefix }}
-            - name: echo
-              run: |
-                echo ${{ steps.get_ips.outputs }}
+#            - name: echo
+#              run: |
+#                echo ${{ steps.get_ips.outputs }}
             - name: Multiple hosts
               uses: appleboy/ssh-action@v1
               with:
