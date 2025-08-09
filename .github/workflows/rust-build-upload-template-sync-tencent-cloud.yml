@@ -45,7 +45,7 @@ jobs:
             - name: Multiple hosts
               uses: appleboy/ssh-action@v1
               with:
-                host: ${{ steps.get_ips.outputs }}
+                host: ${{ steps.get_ips.outputs.result }}
                 username: ${{ inputs.username }}
                 key: ${{ inputs.key }}
                 port: ${{ inputs.port }}
