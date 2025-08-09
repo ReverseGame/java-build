@@ -30,8 +30,10 @@ inputs:
 
 # Define your outputs here.
 outputs:
-  result:
-    description: Your output description here
+  ips:
+    description: ips
+  image_id:
+    description: image_id
 
 runs:
   using: node24
