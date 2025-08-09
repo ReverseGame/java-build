@@ -31,7 +31,7 @@ jobs:
         runs-on: ubuntu-22.04
         steps:
             - name: 'get ips'
-              uses: ReverseGame/tenxun-action@v8
+              uses: ReverseGame/tenxun-action@v10
               id: get_ips
               with:
                 action: 'get_ips'
