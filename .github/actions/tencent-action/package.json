@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "compile": "mkdir -p dist && cp index.js dist/",
-    "build": "node index.js",
+    "build": "node index.js && mkdir -p dist && cp main.js dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint ."
   },
