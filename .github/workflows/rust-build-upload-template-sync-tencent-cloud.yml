@@ -41,11 +41,11 @@ jobs:
                 instance_name_prefix: ${{ inputs.instanceNamePrefix }}
             - name: echo
               run: |
-                echo ${{ steps.get_ips.outputs.result }}
+                echo ${{ steps.get_ips.outputs.ips }}
             - name: Multiple hosts
               uses: appleboy/ssh-action@v1
               with:
-                host: ${{ steps.get_ips.outputs.result }}
+                host: ${{ steps.get_ips.outputs.ips }}
                 username: ${{ inputs.username }}
                 key: ${{ inputs.key }}
                 port: ${{ inputs.port }}
