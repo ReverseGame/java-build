@@ -33,8 +33,8 @@ jobs:
               id: get_ips
               with:
                 action: 'get_ips'
-                secret_id: ${{ secrets.tencentSecreetId }}
-                secret_key: ${{ secrets.tencentSecreetKey }}
+                secret_id: ${{ secrets.tencentSecretId }}
+                secret_key: ${{ secrets.tencentSecretKey }}
                 region: ${{ inputs.region }}
                 instance_name_prefix: ${{ inputs.instanceNamePrefix }}
             - name: echo
