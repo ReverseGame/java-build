@@ -17,9 +17,9 @@ on:
                 type: string
 
         secrets:
-            tencentSecreetId:
+            tencentSecretId:
                 required: true
-            tencentSecreetKey:
+            tencentSecretKey:
                 required: true
             tencentPrivateKey:
                 required: true
