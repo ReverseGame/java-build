@@ -17,12 +17,12 @@ on:
                 type: string
 
         secrets:
-            TENCENT_SECRET_ID:
+            tencentSecreetId:
                 required: true
-            TENCENT_SECRET_KEY:
+            tencentSecreetKey:
                 required: true
-            TENCENT_PRIVATE_KEY:
-                required: false
+            tencentPrivateKey:
+                required: true
 
 jobs:
     build_rust:
@@ -33,8 +33,8 @@ jobs:
               id: get_ips
               with:
                 action: 'get_ips'
-                secret_id: ${{ secrets.TENCENT_SECRET_ID }}
-                secret_key: ${{ secrets.TENCENT_SECRET_KEY }}
+                secret_id: ${{ secrets.tencentSecreetId }}
+                secret_key: ${{ secrets.tencentSecreetKey }}
                 region: ${{ inputs.region }}
                 instance_name_prefix: ${{ inputs.instanceNamePrefix }}
             - name: echo
@@ -45,7 +45,7 @@ jobs:
               with:
                 host: ${{ steps.get_ips.outputs.ips }}
                 username: ${{ inputs.username }}
-                key: ${{ secrets.TENCENT_PRIVATE_KEY }}
+                key: ${{ secrets.tencentPrivateKey }}
                 port: ${{ inputs.port }}
                 script: |
                   echo 123 >> teste.txt
