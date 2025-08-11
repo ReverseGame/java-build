@@ -12,18 +12,9 @@ on:
             username:
                 required: true
                 type: string
-            key:
-                required: true
-                type: string
             port:
                 required: true
                 type: string
-            TENCENT_SECRET_ID:
-                required: true
-                type: string
-            TENCENT_SECRET_KEY:
-              required: true
-              type: string
 
         secrets:
             TENCENT_SECRET_ID:
