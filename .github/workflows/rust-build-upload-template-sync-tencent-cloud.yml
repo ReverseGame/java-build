@@ -53,7 +53,6 @@ jobs:
                   cd rust-gateway && sh update.sh
             - name: 'create image && sync AS'
               uses: ReverseGame/java-build/.github/actions/tencent-action@main
-              id: get_ips
               with:
                 action: 'create_image_sync_as'
                 secret_id: ${{ secrets.tencentSecretId }}
