@@ -15,7 +15,9 @@ on:
             port:
                 required: true
                 type: string
-
+            launch_configuration_id:
+                required: true
+                type: string
         secrets:
             tencentSecretId:
                 required: true
@@ -49,3 +51,13 @@ jobs:
                 port: ${{ inputs.port }}
                 script: |
                   cd rust-gateway && sh update.sh
+            - name: 'create image && sync AS'
+              uses: ReverseGame/java-build/.github/actions/tencent-action@main
+              id: get_ips
+              with:
+                action: 'create_image_sync_as'
+                secret_id: ${{ secrets.tencentSecretId }}
+                secret_key: ${{ secrets.tencentSecretKey }}
+                region: ${{ inputs.region }}
+                instance_name_prefix: ${{ inputs.instanceNamePrefix }}
+                launch_configuration_id: ${{ inputs.launch_configuration_id }}
