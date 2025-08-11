@@ -18,6 +18,12 @@ on:
             launch_configuration_id:
                 required: true
                 type: string
+            source:
+                required: false
+                type: string
+            target:
+                required: false
+                type: string
         secrets:
             tencentSecretId:
                 required: true
@@ -30,6 +36,7 @@ jobs:
     build_rust:
         runs-on: ubuntu-22.04
         steps:
+            - uses: actions/checkout@v4
             - name: 'get ips'
               uses: ReverseGame/java-build/.github/actions/tencent-action@main
               id: get_ips
@@ -42,10 +49,20 @@ jobs:
             - name: echo
               run: |
                 echo ${{ steps.get_ips.outputs.ips }}
+            - name: Copy files via SSH
+              if: inputs.source != ''
+              uses: appleboy/scp-action@v1
+              with:
+                  host: ${{ steps.get_ips.outputs.ips }}
+                  username: ${{ inputs.username }}
+                  key: ${{ secrets.tencentPrivateKey }}
+                  source: ${{ inputs.source }}
+                  target: ${{ inputs.target }}
             - name: Multiple hosts
               uses: appleboy/ssh-action@v1
               with:
                 host: ${{ steps.get_ips.outputs.ips }}
+                sync: true
                 username: ${{ inputs.username }}
                 key: ${{ secrets.tencentPrivateKey }}
                 port: ${{ inputs.port }}
