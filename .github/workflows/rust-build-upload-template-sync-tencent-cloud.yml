@@ -48,4 +48,4 @@ jobs:
                 key: ${{ secrets.tencentPrivateKey }}
                 port: ${{ inputs.port }}
                 script: |
-                  echo 123 >> teste.txt
+                  cd rust-gateway && sh update.sh
