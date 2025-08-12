@@ -15,7 +15,7 @@ on:
             port:
                 required: true
                 type: string
-            launch_configuration_id:
+            launchConfigurationId:
                 required: true
                 type: string
             source:
@@ -76,4 +76,4 @@ jobs:
                 secret_key: ${{ secrets.tencentSecretKey }}
                 region: ${{ inputs.region }}
                 instance_name_prefix: ${{ inputs.instanceNamePrefix }}
-                launch_configuration_id: ${{ inputs.launch_configuration_id }}
+                launch_configuration_id: ${{ inputs.launchConfigurationId }}
