@@ -1,0 +1,79 @@
+name: Rust CI
+
+on:
+    workflow_call:
+        inputs:
+            region:
+                required: true
+                type: string
+            instanceNamePrefix:
+                required: true
+                type: string
+            username:
+                required: true
+                type: string
+            port:
+                required: true
+                type: string
+            launchConfigurationId:
+                required: true
+                type: string
+            source:
+                required: false
+                type: string
+            target:
+                required: false
+                type: string
+        secrets:
+            tencentSecretId:
+                required: true
+            tencentSecretKey:
+                required: true
+            tencentPrivateKey:
+                required: true
+
+jobs:
+    build_rust:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@v4
+            - name: 'get ips'
+              uses: ReverseGame/java-build/.github/actions/tencent-action@main
+              id: get_ips
+              with:
+                action: 'get_ips'
+                secret_id: ${{ secrets.tencentSecretId }}
+                secret_key: ${{ secrets.tencentSecretKey }}
+                region: ${{ inputs.region }}
+                instance_name_prefix: ${{ inputs.instanceNamePrefix }}
+            - name: echo
+              run: |
+                echo ${{ steps.get_ips.outputs.ips }}
+            - name: Copy files via SSH
+              if: inputs.source != ''
+              uses: appleboy/scp-action@v1
+              with:
+                  host: ${{ steps.get_ips.outputs.ips }}
+                  username: ${{ inputs.username }}
+                  key: ${{ secrets.tencentPrivateKey }}
+                  source: ${{ inputs.source }}
+                  target: ${{ inputs.target }}
+            - name: Multiple hosts
+              uses: appleboy/ssh-action@v1
+              with:
+                host: ${{ steps.get_ips.outputs.ips }}
+                sync: true
+                username: ${{ inputs.username }}
+                key: ${{ secrets.tencentPrivateKey }}
+                port: ${{ inputs.port }}
+                script: |
+                  cd rust-gateway && sh update.sh
+            - name: 'create image && sync AS'
+              uses: ReverseGame/java-build/.github/actions/tencent-action@main
+              with:
+                action: 'create_image_sync_as'
+                secret_id: ${{ secrets.tencentSecretId }}
+                secret_key: ${{ secrets.tencentSecretKey }}
+                region: ${{ inputs.region }}
+                instance_name_prefix: ${{ inputs.instanceNamePrefix }}
+                launch_configuration_id: ${{ inputs.launchConfigurationId }}
