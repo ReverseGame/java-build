@@ -213,15 +213,18 @@ jobs:
           PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
           BUILD_STAGE: ${{ inputs.buildStage }}
           BUCKET: ${{ inputs.bucket }}
+          RANDOM_PATH: ${{ steps.random-path.outputs.random_path }}
         with:
           result-encoding: json
           script: |
             const fs = require('fs')
+            const crypto = require('crypto')
 
             const version = process.env.VERSION
             const productName = process.env.PRODUCT_NAME
             const buildStage = process.env.BUILD_STAGE
             const bucket = process.env.BUCKET
+            const randomPath = process.env.RANDOM_PATH
 
             console.log(fs.readdirSync(`./releases`))
             const releases = fs.readdirSync(`./releases/${productName}`)
@@ -239,7 +242,7 @@ jobs:
               pub_date: new Date().toISOString(),
               platforms: {
                 "windows-x86_64": {
-                  url: `https://${bucket}.s3.amazonaws.com/${productName}/${version}-${buildStage}/${windowsApp}`,
+                  url: `https://${bucket}.s3.amazonaws.com/${productName}/${randomPath}/${windowsApp}`,
                   signature: windowsSigContent
                 }
               }
@@ -249,12 +252,16 @@ jobs:
 
             return updateData
 
+      - name: Generate Random Path
+        id: random-path
+        run: echo "random_path=${{ github.sha }}" >> $GITHUB_OUTPUT
+
       - name: Upload Release to S3
         if: success()
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           source: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/
-          destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ fromJson(needs.build-tauri.outputs.product-info).version }}-${{ inputs.buildStage }}/
+          destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ steps.random-path.outputs.random_path }}/
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
