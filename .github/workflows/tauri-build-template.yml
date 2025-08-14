@@ -252,16 +252,21 @@ jobs:
 
             return updateData
 
-      - name: Generate Random Path
+      - name: Generate Path
         id: random-path
-        run: echo "random_path=${{ github.sha }}" >> $GITHUB_OUTPUT
+        run: |
+          if [ "${{ inputs.buildStage }}" = "product" ]; then
+            echo "random_path=${{ fromJson(needs.build-tauri.outputs.product-info).version }}" >> $GITHUB_OUTPUT
+          else
+            echo "random_path=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload Release to S3
         if: success()
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           source: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/
-          destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ steps.random-path.outputs.random_path }}/
+          destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ inputs.buildStage }}/${{ steps.random-path.outputs.random_path }}/
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
