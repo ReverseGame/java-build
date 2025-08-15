@@ -212,7 +212,7 @@ jobs:
           result-encoding: string
           script: |
             const buildStage = '${{ inputs.buildStage }}'
-            const productInfo = JSON.parse('${{ toJSON(needs.build-tauri.outputs.product-info) }}')
+            const productInfo = JSON.parse(${{ toJSON(needs.build-tauri.outputs.product-info) }})
             
             if (buildStage === 'product') {
               return productInfo.version
