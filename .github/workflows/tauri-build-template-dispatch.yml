@@ -75,6 +75,7 @@ jobs:
           add-paths: |
             package.json
             src-tauri/*
+            reverse-bot-rs/*
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
 
