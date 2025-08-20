@@ -56,23 +56,17 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      #      - name: Update submodule SHAs
-      #        run: |
-      #          echo "master SHA: $(git rev-parse HEAD)"
-      #          $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
-      #          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
-      #          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
+      - name: Update submodule SHAs
+        run: |
+          echo "master SHA: $(git rev-parse HEAD)"
+          $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
+          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
+          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
 
       - name: Increment version
         id: version
         run: |
-          $content = Get-Content package.json -Raw
-          $version = ($content | ConvertFrom-Json).version
-          $parts = $version.Split('.')
-          $parts[2] = [int]$parts[2] + 1
-          $newVersion = $parts -join '.'
-          $content = $content -replace """version"": ""$version""", """version"": ""$newVersion"""
-          Set-Content -Path package.json -Value $content
+          pnpm update-version
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
