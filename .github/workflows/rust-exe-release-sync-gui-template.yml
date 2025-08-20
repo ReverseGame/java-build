@@ -33,4 +33,4 @@ jobs:
           token: ${{ secrets.triggerRepoToken }}
           repository: ${{ inputs.triggerRemoteRepo }}
           event-type: ${{ inputs.eventType }}
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "repository": "${{ github.repository }}", "message": "${{ github.event.head_commit.message}}${{ github.event.pull_request.title }}" }'
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "repository": "${{ github.repository }}", "message": "${{ github.event.pull_request.title }}" }'
