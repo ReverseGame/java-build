@@ -72,7 +72,9 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
-          add-paths: package.json src-tauri/*
+          add-paths: |
+            package.json
+            src-tauri/*
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
 
