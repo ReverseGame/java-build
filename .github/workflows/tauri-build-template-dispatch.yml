@@ -67,6 +67,8 @@ jobs:
         id: version
         run: |
           pnpm update-version
+          git add reverse-bot-rs
+          git commit -m "Update version"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
@@ -75,9 +77,9 @@ jobs:
           add-paths: |
             package.json
             src-tauri/*
-            reverse-bot-rs
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
+
 
       - name: post success message
         uses: foxundermoon/feishu-action@v2
