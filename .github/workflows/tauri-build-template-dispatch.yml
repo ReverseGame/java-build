@@ -72,7 +72,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
-          add-paths: package.json
+          add-paths: package.json src-tauri/*
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
 
@@ -84,7 +84,7 @@ jobs:
           content: |
             post:
               zh_cn:
-                title: Xbot-gui PR待审核
+                title: PR待审核
                 content:
                 - - tag: text
                     text: 'PR链接: '
