@@ -58,12 +58,13 @@ jobs:
 
       - name: Update submodule SHAs
         run: |
-          pwd
+          echo $(pwd)
           echo "master SHA: $(git rev-parse HEAD)"
           $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
           git -C $repository fetch origin ${{ github.event.client_payload.sha }}
           git -C $repository checkout ${{ github.event.client_payload.sha }} --force
-          cd reverse-bot-rs && git rev-parse HEAD
+          cd reverse-bot-rs 
+          git rev-parse HEAD
 
       - name: Increment version
         id: version
