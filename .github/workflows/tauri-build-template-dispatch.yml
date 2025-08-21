@@ -55,7 +55,9 @@ jobs:
           token: ${{ secrets.patToken }}
           submodules: recursive
           fetch-depth: 0
-
+      - name: Update Rust (更新 Rust)
+        run: |
+          rustup update
       - name: Update submodule SHAs
         run: |
           echo $(pwd)
