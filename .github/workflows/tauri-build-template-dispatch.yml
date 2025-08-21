@@ -82,8 +82,6 @@ jobs:
             reverse-bot-rs
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
-          branch: auto-update-version
-          delete-branch: true
 
       - name: post success message
         uses: foxundermoon/feishu-action@v2
