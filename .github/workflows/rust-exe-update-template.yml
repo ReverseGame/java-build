@@ -54,9 +54,9 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Update Rust (更新 Rust)
-        run: |
-          rustup update
+#      - name: Update Rust (更新 Rust)
+#        run: |
+#          rustup update
       - name: get cargo version
         id: version
         run: |
