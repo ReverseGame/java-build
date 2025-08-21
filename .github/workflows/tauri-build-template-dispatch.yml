@@ -75,13 +75,15 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
+          token: ${{ secrets.patToken }}
           add-paths: |
             package.json
             src-tauri/*
             reverse-bot-rs
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
-
+          branch: auto-update-version
+          delete-branch: true
 
       - name: post success message
         uses: foxundermoon/feishu-action@v2
