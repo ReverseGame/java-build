@@ -61,8 +61,8 @@ jobs:
           echo $(pwd)
           echo "master SHA: $(git rev-parse HEAD)"
           $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
-          git -C $repository fetch origin e3a65f61bc74b63c12ee97c92e40dff1f53cf860
-          git -C $repository checkout e3a65f61bc74b63c12ee97c92e40dff1f53cf860 --force
+          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
+          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
           cd reverse-bot-rs 
           git rev-parse HEAD
 
