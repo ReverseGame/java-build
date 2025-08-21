@@ -54,7 +54,9 @@ jobs:
         with:
           token: ${{ secrets.patToken }}
           submodules: recursive
-
+      - name: Update Rust (更新 Rust)
+        run: |
+          rustup update
       - name: Get Project Info
         id: product-info
         uses: actions/github-script@v7
