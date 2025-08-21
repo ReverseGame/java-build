@@ -75,7 +75,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
-          token: ${{ secrets.patToken }}
+          token: ${{ secrets.PR_TOKEN }}
           add-paths: |
             package.json
             src-tauri/*
