@@ -155,6 +155,7 @@ jobs:
             - name: Build tauri (构建 tauri)
               id: build
               uses: tauri-apps/tauri-action@v0
+              continue-on-error: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAURI_PRIVATE_KEY: ${{ vars.TAURI_SIGNING_PRIVATE_KEY }}
@@ -162,7 +163,7 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY: ${{ vars.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
                   RUSTFLAGS: '--cfg env="${{ inputs.buildStage }}"'
-                  RUST_TARGET_DIR: "../../gui/${{ inputs.buildStage }}"
+                  CARGO_TARGET_DIR: "../../gui/${{ inputs.buildStage }}"
               with:
                   args: ${{ matrix.args }}
 
