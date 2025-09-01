@@ -40,7 +40,7 @@ on:
 
 jobs:
   pr_new_version:
-    runs-on: "rust-windows"
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
       pull-requests: write
@@ -60,15 +60,20 @@ jobs:
         run: |
           echo $(pwd)
           echo "master SHA: $(git rev-parse HEAD)"
-          $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
+          repository=$(basename ReverseGame/reverse-bot-rs)
           git -C $repository fetch origin ${{ github.event.client_payload.sha }}
           git -C $repository checkout ${{ github.event.client_payload.sha }} --force
           cd reverse-bot-rs 
           git rev-parse HEAD
 
+      - name: Setup Node.js  environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.nodeVersion }}
       - name: Increment version
         id: version
         run: |
+          npm install -g pnpm
           pnpm update-version
 
       - name: Create Pull Request
