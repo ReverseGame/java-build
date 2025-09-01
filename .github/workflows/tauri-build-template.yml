@@ -170,6 +170,7 @@ jobs:
             - name: Upload Artifact (上传构建产物)
               uses: actions/upload-artifact@v4
               if: success() && matrix.os == 'windows'
+              continue-on-error: true
               with:
                   if-no-files-found: error
                   overwrite: true
