@@ -60,7 +60,7 @@ jobs:
         run: |
           echo $(pwd)
           echo "master SHA: $(git rev-parse HEAD)"
-          $repository = Split-Path ${{ github.event.client_payload.repository }} -Leaf
+          repository=$(basename ReverseGame/reverse-bot-rs)
           git -C $repository fetch origin ${{ github.event.client_payload.sha }}
           git -C $repository checkout ${{ github.event.client_payload.sha }} --force
           cd reverse-bot-rs 
