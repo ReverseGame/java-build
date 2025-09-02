@@ -139,15 +139,15 @@ jobs:
             #   with:
             #     targets: "aarch64-apple-darwin,x86_64-apple-darwin"
 
-            - name: Setup pnpm (安装 pnpm)
-              uses: pnpm/action-setup@v4
-              with:
-                  version: latest
-
-            - name: Setup node (设置 node 版本)
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ inputs.nodeVersion }}
+#            - name: Setup pnpm (安装 pnpm)
+#              uses: pnpm/action-setup@v4
+#              with:
+#                  version: latest
+#
+#            - name: Setup node (设置 node 版本)
+#              uses: actions/setup-node@v4
+#              with:
+#                  node-version: ${{ inputs.nodeVersion }}
 
             - name: Install frontend dependencies (安装前端依赖)
               run: pnpm install
