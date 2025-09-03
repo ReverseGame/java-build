@@ -26,6 +26,9 @@ on:
             bucket:
                 required: true
                 type: string
+            platform:
+                required: true
+                type: string
         secrets:
             awsAccessKey:
                 required: true
@@ -42,7 +45,7 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    - platform: "rust-windows"
+                    - platform: ${{ inputs.platform }}
                       os: "windows"
                       arch: "x86_64"
                       args: ${{ inputs.buildStage == 'dev' && '-f dev --config ./src-tauri/tauri.conf.dev.json' || inputs.buildStage == 'beta' && '-f beta --config ./src-tauri/tauri.conf.beta.json' || inputs.buildStage == 'product' && '-f product --config ./src-tauri/tauri.conf.json' }}
@@ -148,6 +151,9 @@ jobs:
 #              uses: actions/setup-node@v4
 #              with:
 #                  node-version: ${{ inputs.nodeVersion }}
+
+            - name: 设置pnpm国内源
+              run: pnpm config set registry https://registry.npmmirror.com
 
             - name: Install frontend dependencies (安装前端依赖)
               run: pnpm install
