@@ -163,7 +163,7 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY: ${{ vars.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
                   RUSTFLAGS: '--cfg env="${{ inputs.buildStage }}"'
-                  CARGO_TARGET_DIR: "../../gui/${{ inputs.buildStage }}"
+                  CARGO_TARGET_DIR: "${{ github.workspace }}/gui/${{ inputs.buildStage }}"
               with:
                   args: ${{ matrix.args }}
 
@@ -176,8 +176,8 @@ jobs:
                   overwrite: true
                   name: windows-bundle
                   path: |
-                      ../gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip
-                      ../gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip.sig
+                      ${{ github.workspace }}/gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip
+                      ${{ github.workspace }}/gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip.sig
 
             - name: Post Message (发送飞书 Webhook 消息)
               uses: Comori/feishu@v0.0.5
