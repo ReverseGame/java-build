@@ -158,6 +158,18 @@ jobs:
             - name: Install frontend dependencies (安装前端依赖)
               run: pnpm install
 
+            - name: Get target cache dir (获取构建缓存目录)
+              id: target-cache-dir
+              uses: actions/github-script@v7
+              with:
+                  result-encoding: string
+                  script: |
+                      const path = require('path')
+                      const parentDir = path.dirname(process.env.GITHUB_WORKSPACE)
+                      console.log(`当前工作目录: ${process.env.GITHUB_WORKSPACE}`)
+                      console.log(`上级目录: ${parentDir}`)
+                      return parentDir
+
             - name: Build tauri (构建 tauri)
               id: build
               uses: tauri-apps/tauri-action@v0
@@ -169,7 +181,7 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY: ${{ vars.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
                   RUSTFLAGS: '--cfg env="${{ inputs.buildStage }}"'
-                  CARGO_TARGET_DIR: "${{ github.workspace }}/gui/${{ inputs.buildStage }}"
+                  CARGO_TARGET_DIR: "${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}"
               with:
                   args: ${{ matrix.args }}
 
@@ -182,8 +194,8 @@ jobs:
                   overwrite: true
                   name: windows-bundle
                   path: |
-                      ${{ github.workspace }}/gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip
-                      ${{ github.workspace }}/gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip.sig
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip.sig
 
             - name: Post Message (发送飞书 Webhook 消息)
               uses: Comori/feishu@v0.0.5
