@@ -192,10 +192,10 @@ jobs:
               with:
                   if-no-files-found: error
                   overwrite: true
-                  name: windows-bundle
+                  name: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
                   path: |
-                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip
-                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/*.msi.zip.sig
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
 
             - name: Post Message (发送飞书 Webhook 消息)
               uses: Comori/feishu@v0.0.5
