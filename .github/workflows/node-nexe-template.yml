@@ -80,7 +80,7 @@ jobs:
             - name: Upload executable
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.output }}-${{ steps.calculate_md5.outputs.HASH }}
+                  name: ${{ inputs.output }}
                   path: ${{ inputs.output }}.zip
         outputs:
             hash: ${{ steps.calculate_md5.outputs.HASH }}
@@ -98,7 +98,7 @@ jobs:
               uses: keithweaver/aws-s3-github-action@v1.0.0
               with:
                   command: cp
-                  source: release/${{ inputs.output }}.zip
+                  source: ${{ inputs.output }}.zip
                   destination: s3://${{ inputs.bucket }}/${{ inputs.output }}/${{ inputs.output }}-${{ needs.node_build.outputs.hash }}.zip
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
