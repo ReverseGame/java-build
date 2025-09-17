@@ -86,6 +86,13 @@ jobs:
             reverse-bot-rs
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
+          
+      - name: Enable Pull Request Automerge
+        if: steps.cpr.outputs.pull-request-number != ''
+        run: |
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin
+        env:
+            GH_TOKEN: ${{ secrets.PAT }}
 
       - name: post success message
         uses: foxundermoon/feishu-action@v2
