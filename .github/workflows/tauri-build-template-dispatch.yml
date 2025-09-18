@@ -102,7 +102,7 @@ jobs:
           content: |
             post:
               zh_cn:
-                title: PR待审核
+                title: PR 合并成功
                 content:
                 - - tag: text
                     text: 'PR链接: '
