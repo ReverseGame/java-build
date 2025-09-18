@@ -90,7 +90,7 @@ jobs:
       - name: Enable Pull Request Automerge
         if: steps.cpr.outputs.pull-request-number != ''
         run: |
-          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin --merge
         env:
             GH_TOKEN: ${{ secrets.patToken }}
 
