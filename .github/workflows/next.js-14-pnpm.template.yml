@@ -87,6 +87,7 @@ jobs:
           envkey_NEXT_PUBLIC_WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
           envkey_NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           envkey_NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
+          envkey_KLAVIYO_PUBLIC_API_KEY: ${{ vars.KLAVIYO_PUBLIC_API_KEY }}
           envkey_NEXT_PUBLIC_AW: ${{ vars.NEXT_PUBLIC_AW }}
           path: .env
 
