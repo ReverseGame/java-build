@@ -1,0 +1,111 @@
+name: Tauri CI Dispatch
+
+on:
+  workflow_call:
+    inputs:
+      buildStage:
+        required: true
+        type: string
+      nodeVersion:
+        required: false
+        type: string
+        default: "lts/*"
+      tauriVersion:
+        required: false
+        type: string
+        default: "1"
+      awsRegion:
+        required: true
+        type: string
+      buildFeishuWebhook:
+        required: false
+        type: string
+      releaseFeishuWebhook:
+        required: false
+        type: string
+      bucket:
+        required: true
+        type: string
+    secrets:
+      awsAccessKey:
+        required: true
+      awsSecretKey:
+        required: true
+      tauriPrivateKey:
+        required: true
+      tauriKeyPassword:
+        required: true
+      patToken:
+        required: true
+
+jobs:
+  pr_new_version:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Echo client_payload
+        run: |
+          echo "client_payload sha: ${{ github.event.client_payload.sha }}"
+          echo "client_payload pr_title: ${{ github.event.client_payload.message }}"
+      - name: Checkout code (检出代码)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.patToken }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Update submodule SHAs
+        run: |
+          echo $(pwd)
+          echo "master SHA: $(git rev-parse HEAD)"
+          repository=$(basename ReverseGame/reverse-bot-rs)
+          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
+          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
+          cd reverse-bot-rs 
+          git rev-parse HEAD
+
+      - name: Setup Node.js  environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.nodeVersion }}
+      - name: Increment version
+        id: version
+        run: |
+          npm install -g pnpm
+          pnpm update-version
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        with:
+          add-paths: |
+            package.json
+            src-tauri/*
+            reverse-bot-rs
+          commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
+          title: '[create-pull-request] ${{ github.event.client_payload.message }}'
+
+      - name: Enable Pull Request Automerge
+        if: steps.cpr.outputs.pull-request-number != ''
+        run: |
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin --merge
+        env:
+            GH_TOKEN: ${{ secrets.patToken }}
+
+      - name: post success message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ inputs.buildFeishuWebhook }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: PR 合并成功
+                content:
+                - - tag: text
+                    text: 'PR链接: '
+                  - tag: a
+                    text: 点击跳转
+                    href: ${{ steps.cpr.outputs.pull-request-url }}

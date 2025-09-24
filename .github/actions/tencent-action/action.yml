@@ -1,0 +1,40 @@
+name: 'tencent-action'
+description: 'tencent cloud action'
+author: 'ptechen'
+
+# Add your action's branding here. This will appear on the GitHub Marketplace.
+branding:
+  icon: heart
+  color: red
+
+# Define your inputs here.
+inputs:
+  action:
+    required: true
+    description: 'get_ips | create_image | create_image_sync_as'
+  secret_id:
+    required: true
+    description: tencent cloud secret_id
+  secret_key:
+    required: true
+    description: tencent cloud secret_key
+  region:
+    required: true
+    description: tencent cloud region
+  instance_name_prefix:
+    required: true
+    description: tencent cloud ECS instance_name_prefix
+  launch_configuration_id:
+    required: false
+    description: tencent cloud AS launch_configuration_id
+
+# Define your outputs here.
+outputs:
+  ips:
+    description: ips
+  image_id:
+    description: image_id
+
+runs:
+  using: node24
+  main: index.js
