@@ -95,8 +95,8 @@ jobs:
         run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install Golang
         uses: actions/setup-go@v6
-          with:
-            go-version: '1.18'
+        with:
+          go-version: '1.25.1'
       - run: go version
       - run: cargo install --force rust2go-cli
 
