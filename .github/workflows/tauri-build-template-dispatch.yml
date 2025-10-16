@@ -56,7 +56,8 @@ jobs:
           token: ${{ secrets.patToken }}
           submodules: recursive
           fetch-depth: 0
-
+      - name: show dir list
+        run: ls -a
       - name: Update submodule SHAs
         run: |
           echo $(pwd)
@@ -98,16 +99,16 @@ jobs:
             package.json
             src-tauri/*
             ${{ github.event.client_payload.repository }}
-          commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
-          title: '[create-pull-request] ${{ github.event.client_payload.message }}'
-          body: '${{ steps.pr_body.outputs.body }}'
+          commit-message: "[create-pull-request] ${{ github.event.client_payload.message }}"
+          title: "[create-pull-request] ${{ github.event.client_payload.message }}"
+          body: "${{ steps.pr_body.outputs.body }}"
 
       - name: Enable Pull Request Automerge
         if: steps.cpr.outputs.pull-request-number != ''
         run: |
           gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin --merge
         env:
-            GH_TOKEN: ${{ secrets.patToken }}
+          GH_TOKEN: ${{ secrets.patToken }}
 
       - name: post success message
         uses: foxundermoon/feishu-action@v2
