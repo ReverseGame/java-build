@@ -274,8 +274,26 @@ jobs:
                       const windowsSig = releases.find(release => release.endsWith('.msi.zip.sig'))
                       const windowsSigContent = fs.readFileSync(`./releases/${productName}/${windowsSig}`, 'utf-8')
 
-                      const prNotes = context.payload?.pull_request?.body?.trim()
-                      const notes = prNotes && prNotes.length > 0 ? prNotes : '优化已知问题'
+                      let notes = context.payload?.pull_request?.body?.trim()
+
+                      if (!notes) {
+                        try {
+                          const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            commit_sha: context.sha
+                          })
+
+                          const noteSource = prs.find(pr => pr.body && pr.body.trim().length > 0)
+                          notes = noteSource?.body?.trim()
+                        } catch (error) {
+                          core.warning(`Failed to resolve PR notes: ${error.message}`)
+                        }
+                      }
+
+                      if (!notes || notes.length === 0) {
+                        notes = '优化已知问题'
+                      }
 
                       const updateData = {
                         version: `v${version}`,
