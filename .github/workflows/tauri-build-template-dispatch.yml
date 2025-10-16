@@ -49,6 +49,7 @@ jobs:
         run: |
           echo "client_payload sha: ${{ github.event.client_payload.sha }}"
           echo "client_payload pr_title: ${{ github.event.client_payload.message }}"
+          echo "client_payload repository: ${{ github.event.client_payload.repository }}"
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
         with:
@@ -60,10 +61,11 @@ jobs:
         run: |
           echo $(pwd)
           echo "master SHA: $(git rev-parse HEAD)"
-          repository=$(basename ReverseGame/reverse-bot-rs)
+          repository="${{ github.event.client_payload.repository }}"
+          echo "Updating repository: $repository"
           git -C $repository fetch origin ${{ github.event.client_payload.sha }}
           git -C $repository checkout ${{ github.event.client_payload.sha }} --force
-          cd reverse-bot-rs 
+          cd $repository 
           git rev-parse HEAD
 
       - name: Setup Node.js  environment
@@ -76,6 +78,18 @@ jobs:
           npm install -g pnpm
           pnpm update-version
 
+      - name: Set PR body based on repository
+        id: pr_body
+        run: |
+          repository="${{ github.event.client_payload.repository }}"
+          if [ "$repository" == "reverse-bot-rs" ]; then
+            echo "body=xbot 内核更新" >> $GITHUB_OUTPUT
+          elif [ "$repository" == "reverse-proxy-test" ]; then
+            echo "body=代理测试模块更新" >> $GITHUB_OUTPUT
+          else
+            echo "body=优化已知问题" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         id: cpr
@@ -83,9 +97,10 @@ jobs:
           add-paths: |
             package.json
             src-tauri/*
-            reverse-bot-rs
+            ${{ github.event.client_payload.repository }}
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
+          body: '${{ steps.pr_body.outputs.body }}'
 
       - name: Enable Pull Request Automerge
         if: steps.cpr.outputs.pull-request-number != ''
