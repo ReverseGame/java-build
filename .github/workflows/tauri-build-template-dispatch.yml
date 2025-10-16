@@ -64,9 +64,12 @@ jobs:
           echo "master SHA: $(git rev-parse HEAD)"
           repository="${{ github.event.client_payload.repository }}"
           echo "Updating repository: $repository"
-          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
-          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
-          cd $repository 
+          # 从完整仓库路径提取仓库名 (如: ReverseGame/reverse-proxy-test -> reverse-proxy-test)
+          repo_name=$(basename $repository)
+          echo "Local submodule path: $repo_name"
+          git -C $repo_name fetch origin ${{ github.event.client_payload.sha }}
+          git -C $repo_name checkout ${{ github.event.client_payload.sha }} --force
+          cd $repo_name 
           git rev-parse HEAD
 
       - name: Setup Node.js  environment
