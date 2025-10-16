@@ -87,6 +87,13 @@ jobs:
           commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
           title: '[create-pull-request] ${{ github.event.client_payload.message }}'
 
+      - name: Enable Pull Request Automerge
+        if: steps.cpr.outputs.pull-request-number != ''
+        run: |
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin --merge
+        env:
+            GH_TOKEN: ${{ secrets.patToken }}
+
       - name: post success message
         uses: foxundermoon/feishu-action@v2
         with:
@@ -95,7 +102,7 @@ jobs:
           content: |
             post:
               zh_cn:
-                title: PR待审核
+                title: PR 合并成功
                 content:
                 - - tag: text
                     text: 'PR链接: '

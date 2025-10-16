@@ -1,19 +1,32 @@
-name: Node CI
+name: Rust CI
+
 on:
   workflow_call:
     inputs:
       projectName:
         required: true
         type: string
-      buildStage:
+      packageName:
         required: true
         type: string
-      envRule:
+      buildStage:
         required: true
         type: string
       workDir:
         required: true
         type: string
+      dockerDir:
+        required: false
+        type: string
+        default: ''
+      dockerfile:
+        required: false
+        type: string
+        default: 'Dockerfile'
+      k8sfile:
+        required: false
+        type: string
+        default: 'k8s'
       projectPrefix:
         required: true
         type: string
@@ -32,11 +45,11 @@ on:
         required: true
       dockerUrl:
         required: true
+      dockerRepo:
+        required: true
       dockerUsername:
         required: true
       dockerPassword:
-        required: true
-      dockerRepo:
         required: true
       kubeConfig:
         required: true
@@ -45,20 +58,17 @@ on:
       awsSecretKey:
         required: false
 
-
-
 jobs:
-  node_build:
-    environment: ${{ inputs.envRule }}
-    runs-on: ubuntu-latest
+  build-rust:
     strategy:
       matrix:
-        node-version: [ 18.x ]
+        platform: [ ubuntu-22.04 ]
+    runs-on: ${{ matrix.platform }}
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
 
     steps:
-      - name: post message
+      - name: post messasge
         uses: foxundermoon/feishu-action@v2
         with:
           url: ${{ secrets.webhookFeishu }}
@@ -72,56 +82,44 @@ jobs:
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
-                    text: '所属分支: ${{ github.ref }}'
-                - - tag: text
                     text: '部署链接: '
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
-      - name: Write env file
-        uses: SpicyPizza/create-envfile@v2.0
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
         with:
-          envkey_NEXT_PUBLIC_APP_ENV: ${{ vars.NEXT_PUBLIC_APP_ENV }}
-          envkey_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-          envkey_NEXT_PUBLIC_WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
-          envkey_NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
-          envkey_NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
-          envkey_NEXT_PUBLIC_KLAVIYO_PUBLIC_API_KEY: ${{ vars.NEXT_PUBLIC_KLAVIYO_PUBLIC_API_KEY }}
-          envkey_NEXT_PUBLIC_AW: ${{ vars.NEXT_PUBLIC_AW }}
-          path: .env
+          version: '23.x'
+      - name: Install Rust
+        run: rustup toolchain install stable --component llvm-tools-preview
+      - name: Install Golang
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.1'
+      - run: go version
+      - run: cargo install --force rust2go-cli
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Get pnpm store directory path
-        id: pnpm-store-dir-path
-        run: echo "::set-output name=dir::$(pnpm store path)"
-      - uses: actions/cache@v3
-        id: pnpm-cache
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install openssl
+        run: sudo apt-get install libssl-dev libsasl2-dev
+      - name: Set up cache
+        uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: |
-            ${{ steps.pnpm-store-dir-path.outputs.dir }}
-            ${{ github.workspace }}/.next/cache
-          # 每当 pnpm-lock.yaml 或源代码变化时生成新的缓存 key
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
-          # 如果源文件变化但依赖没变，则恢复先前缓存
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ./target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm run build:beta
-        if: ${{ inputs.buildStage == 'beta' }}
-
-      - run: pnpm run build
-        if: ${{ inputs.buildStage == 'product' }}
-
+      - name: Build Release
+        run: cargo build --release --bin ${{ inputs.packageName }}
+      - name: show target
+        run: ls -l target/release/ 
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -132,34 +130,36 @@ jobs:
         uses: docker/build-push-action@v3.1.1
         with:
           push: true
-          context: .
-          file: Dockerfile-${{ inputs.buildStage }}
+          context: ${{ inputs.workDir }}
+          file: ${{ inputs.workDir }}/${{ inputs.dockerfile }}-${{ inputs.buildStage }}
           tags: ${{ env.tag }}
       - name: post success message
+        if: always()
         uses: foxundermoon/feishu-action@v2
-        if: ${{ always() }}
         with:
           url: ${{ secrets.webhookFeishu }}
           msg_type: post
           content: |
             post:
               zh_cn:
-                title: ${{ inputs.projectName }} 构建 ${{ job.status }} !
+                title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
                 content:
                 - - tag: text
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
-                    text: '所属分支: ${{ github.ref }}'
-                - - tag: text
-                    text: '部署链接:'
+                    text: '部署链接: '
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
   deploy_local:
-    runs-on: Linux
-    if: inputs.buildStage == 'beta' && !inputs.eks
-    needs: node_build
+    if: inputs.buildStage == 'beta'
+    needs: build-rust
+    runs-on: linux
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
@@ -177,8 +177,6 @@ jobs:
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
-                    text: '所属分支: ${{ github.ref }}'
-                - - tag: text
                     text: '部署链接: '
                   - tag: a
                     text: github action
@@ -188,37 +186,39 @@ jobs:
         uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./k8s-${{ inputs.buildStage }}.yaml || true
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
       - name: post success message
+        if: always()
         uses: foxundermoon/feishu-action@v2
-        if: ${{ always() }}
         with:
           url: ${{ secrets.webhookFeishu }}
           msg_type: post
           content: |
             post:
               zh_cn:
-                title: ${{ inputs.projectName }} 部署 ${{ job.status }} !
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
                 content:
                 - - tag: text
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
-                    text: '所属分支: ${{ github.ref }}'
-                - - tag: text
-                    text: '部署链接:'
+                    text: '部署链接: '
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
   deploy_product:
-    runs-on: ubuntu-latest
     if: inputs.buildStage == 'product' && !inputs.eks
-    needs: node_build
+    needs: build-rust
+    runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
@@ -236,8 +236,6 @@ jobs:
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
-                    text: '所属分支: ${{ github.ref }}'
-                - - tag: text
                     text: '部署链接: '
                   - tag: a
                     text: github action
@@ -247,41 +245,44 @@ jobs:
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.kubeConfig }}
-          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./k8s-${{ inputs.buildStage }}.yaml || true
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml || true
       - name: apply
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
       - name: post success message
+        if: always()
         uses: foxundermoon/feishu-action@v2
-        if: ${{ always() }}
         with:
           url: ${{ secrets.webhookFeishu }}
           msg_type: post
           content: |
             post:
               zh_cn:
-                title: ${{ inputs.projectName }} 部署 ${{ job.status }} !
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
                 content:
                 - - tag: text
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
-                    text: '所属分支: ${{ github.ref }}'
-                - - tag: text
-                    text: '部署链接:'
+                    text: '部署链接: '
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
 
   deploy_eks:
-    runs-on: ubuntu-latest
     if: inputs.buildStage == 'product' && inputs.eks
-    needs: node_build
+    needs: build-rust
+    runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
       aws_region: ${{ inputs.awsRegion }}
+
     steps:
       - name: post message
         uses: foxundermoon/feishu-action@v2
@@ -296,8 +297,6 @@ jobs:
                 - - tag: text
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
-                - - tag: text
-                    text: '所属分支: ${{ github.ref }}'
                 - - tag: text
                     text: '部署链接: '
                   - tag: a
@@ -309,36 +308,37 @@ jobs:
           aws-access-key-id: ${{ secrets.awsAccessKey }}
           aws-secret-access-key: ${{ secrets.awsSecretKey }}
           aws-region: ${{ env.aws_region }}
-
       - uses: actions/checkout@v3
-      - name: create
+      - name: create 
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}
-          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./k8s-${{ inputs.buildStage }}.yaml
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
       - name: apply
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}
-          args: set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }} --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
       - name: post success message
+        if: always()
         uses: foxundermoon/feishu-action@v2
-        if: ${{ always() }}
         with:
           url: ${{ secrets.webhookFeishu }}
           msg_type: post
           content: |
             post:
               zh_cn:
-                title: ${{ inputs.projectName }} 部署 ${{ job.status }} !
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
                 content:
                 - - tag: text
                     un_escape: true
                     text: '部署环境: ${{ inputs.buildStage }}'
                 - - tag: text
-                    text: '所属分支: ${{ github.ref }}'
-                - - tag: text
-                    text: '部署链接:'
+                    text: '部署链接: '
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
