@@ -59,6 +59,7 @@ jobs:
       - name: show dir list
         run: ls -a
       - name: Update submodule SHAs
+        id: update_submodule
         run: |
           echo $(pwd)
           echo "master SHA: $(git rev-parse HEAD)"
@@ -67,6 +68,7 @@ jobs:
           # 从完整仓库路径提取仓库名 (如: ReverseGame/reverse-proxy-test -> reverse-proxy-test)
           repo_name=$(basename $repository)
           echo "Local submodule path: $repo_name"
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
           git -C $repo_name fetch origin ${{ github.event.client_payload.sha }}
           git -C $repo_name checkout ${{ github.event.client_payload.sha }} --force
           cd $repo_name 
@@ -85,10 +87,10 @@ jobs:
       - name: Set PR body based on repository
         id: pr_body
         run: |
-          repository="${{ github.event.client_payload.repository }}"
-          if [ "$repository" == "reverse-bot-rs" ]; then
+          repo_name="${{ steps.update_submodule.outputs.repo_name }}"
+          if [ "$repo_name" == "reverse-bot-rs" ]; then
             echo "body=xbot 内核更新" >> $GITHUB_OUTPUT
-          elif [ "$repository" == "reverse-proxy-test" ]; then
+          elif [ "$repo_name" == "reverse-proxy-test" ]; then
             echo "body=代理测试模块更新" >> $GITHUB_OUTPUT
           else
             echo "body=优化已知问题" >> $GITHUB_OUTPUT
@@ -101,7 +103,7 @@ jobs:
           add-paths: |
             package.json
             src-tauri/*
-            ${{ github.event.client_payload.repository }}
+            ${{ steps.update_submodule.outputs.repo_name }}
           commit-message: "[create-pull-request] ${{ github.event.client_payload.message }}"
           title: "[create-pull-request] ${{ github.event.client_payload.message }}"
           body: "${{ steps.pr_body.outputs.body }}"
