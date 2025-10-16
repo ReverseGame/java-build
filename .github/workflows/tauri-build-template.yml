@@ -274,9 +274,12 @@ jobs:
                       const windowsSig = releases.find(release => release.endsWith('.msi.zip.sig'))
                       const windowsSigContent = fs.readFileSync(`./releases/${productName}/${windowsSig}`, 'utf-8')
 
+                      const prNotes = context.payload?.pull_request?.body?.trim()
+                      const notes = prNotes && prNotes.length > 0 ? prNotes : '优化已知问题'
+
                       const updateData = {
                         version: `v${version}`,
-                        notes: `v${version}`,
+                        notes,
                         pub_date: new Date().toISOString(),
                         platforms: {
                           "windows-x86_64": {
