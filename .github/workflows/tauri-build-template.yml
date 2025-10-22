@@ -419,25 +419,24 @@ jobs:
               env:
                   PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).productName }}
                   VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
-                  UPDATE_LOG: ${{ steps.update-log.outputs.result }}
                   INSTALL_INFO: ${{ steps.install-info.outputs.result }}
               with:
                   result-encoding: json
                   script: |
                       const productName = process.env.PRODUCT_NAME
                       const version = process.env.VERSION
-                      const updateLog = process.env.UPDATE_LOG
 
                       const installInfo = JSON.parse(process.env.INSTALL_INFO)
+                      const updateNotes = installInfo.notes || '优化已知问题'
 
                       const windowsUrl = `[Windows下载](${installInfo.platforms['windows-x86_64'].url})`
-                      return `**🌟 更新内容**\n${updateLog}\n\n**🔗 下载链接**\n${windowsUrl}`
+                      return `**🌟 更新内容**\n${updateNotes}\n\n**🔗 下载链接**\n${windowsUrl}`
 
             - name: Post Message (发送飞书 Webhook 消息)
               uses: Comori/feishu@v0.0.5
-              if: success() && ${{ inputs.buildFeishuWebhook }}
+              if: success() && ${{ inputs.releaseFeishuWebhook }}
               with:
-                  webhook-url: ${{ inputs.buildFeishuWebhook }}
+                  webhook-url: ${{ inputs.releaseFeishuWebhook }}
                   msg-type: cardkit
                   cardkit-id: AAq15syMYoq55
                   cardkit-version: 0.0.3
