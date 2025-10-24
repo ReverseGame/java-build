@@ -114,12 +114,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
 
-      - name: Approve builds
-        run: pnpm approve-builds sharp unrs-resolver
-
-      - name: Install libvips
-        run: sudo apt-get update && sudo apt-get install -y libvips-dev
-
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm run build:beta
