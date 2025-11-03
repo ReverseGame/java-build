@@ -15,9 +15,6 @@ on:
       workDir:
         required: true
         type: string
-      appId:
-        required: true
-        type: string
       desc:
         required: false
         type: string
@@ -29,6 +26,8 @@ on:
         required: true
       wechatToolId:
         required: false
+      appId:
+        required: true
 
 jobs:
   build_and_upload:
@@ -84,7 +83,7 @@ jobs:
         run: |
           npx miniprogram-ci upload \
             --project-path ${{ inputs.workDir }}/dist/build/mp-weixin \
-            --appid ${{ inputs.appId }} \
+            --appid ${{ secrets.appId }} \
             --private-key-path private.key \
             --type miniProgram \
             --version ${{ steps.version.outputs.version }} \
