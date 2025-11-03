@@ -32,7 +32,7 @@ on:
 jobs:
   build_and_upload:
     environment: ${{ inputs.envRule }}
-    runs-on: ubuntu-latest
+    runs-on: wechat-app
     strategy:
       matrix:
         node-version: [18.x]
@@ -61,7 +61,7 @@ jobs:
       - name: 🧩 生成唯一版本号
         id: version
         run: |
-          VERSION="v$(date +'%Y%m%d.%H%M%S').$(echo $GITHUB_SHA | cut -c1-7)"
+          VERSION="v$(date +'%Y%m%d.%H%M%S')"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "🧱 自动生成版本号: $VERSION"
 
