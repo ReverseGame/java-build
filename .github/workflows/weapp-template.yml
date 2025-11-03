@@ -104,7 +104,7 @@ jobs:
           content: |
             post:
               zh_cn:
-                title: "${{ inputs.projectName }} 小程序构建 ${{ job.status }} 🎉"
+                title: "${{ inputs.projectName }} 小程序上传 ${{ job.status }}，去后台发布 🎉"
                 content:
                   - - tag: text
                       text: "环境: ${{ inputs.buildStage }}"
