@@ -81,12 +81,13 @@ jobs:
 
       - name: 🚀 上传小程序代码
         run: |
-          node upload.js \
-            "./dist/build/mp-weixin" \
-            "${{ secrets.appId }}" \
-            "./private.key" \
-            "${{ steps.version.outputs.version }}" \
-            "${{ inputs.desc }}"
+          npx miniprogram-ci upload \
+            --pp ${{ inputs.workDir }}/dist/build/mp-weixin \
+            --pkp private.key \
+            --appid ${{ secrets.appId }} \
+            --uv ${{ steps.version.outputs.version }} \
+            -r 1 \
+            --enable-es6 true \
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
