@@ -1,0 +1,116 @@
+name: Weapp CI
+
+on:
+  workflow_call:
+    inputs:
+      projectName:
+        required: true
+        type: string
+      buildStage:
+        required: true
+        type: string
+      envRule:
+        required: true
+        type: string
+      workDir:
+        required: true
+        type: string
+      appId:
+        required: true
+        type: string
+      desc:
+        required: false
+        type: string
+        default: "GitHub Actions 自动上传"
+    secrets:
+      webhookFeishu:
+        required: true
+      wechatPrivateKey:
+        required: true
+      wechatToolId:
+        required: false
+
+jobs:
+  build_and_upload:
+    environment: ${{ inputs.envRule }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: 📨 构建开始通知
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: "${{ inputs.projectName }} 小程序开始构建 🚀"
+                content:
+                  - - tag: text
+                      text: "环境: ${{ inputs.buildStage }}"
+                  - - tag: text
+                      text: "分支: ${{ github.ref }}"
+                  - - tag: a
+                      text: 查看运行详情
+                      href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - uses: actions/checkout@v3
+
+      - name: 🧩 生成唯一版本号
+        id: version
+        run: |
+          VERSION="v$(date +'%Y%m%d.%H%M%S')-$(echo $GITHUB_SHA | cut -c1-7)"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "🧱 自动生成版本号: $VERSION"
+
+      - name: 📦 安装依赖
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm install
+
+      - name: 🏗️ 构建微信小程序
+        run: pnpm run build:mp-weixin
+        working-directory: ${{ inputs.workDir }}
+
+      - name: 🧱 保存微信小程序私钥
+        run: |
+          echo "${{ secrets.wechatPrivateKey }}" > private.key
+
+      - name: 🚀 上传小程序代码
+        run: |
+          npx miniprogram-ci upload \
+            --project-path ${{ inputs.workDir }}/dist/build/mp-weixin \
+            --appid ${{ inputs.appId }} \
+            --private-key-path private.key \
+            --type miniProgram \
+            --version ${{ steps.version.outputs.version }} \
+            --desc "${{ inputs.desc }}"
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: 🧹 清理私钥
+        if: always()
+        run: rm -f private.key
+
+      - name: ✅ 上传完成通知
+        uses: foxundermoon/feishu-action@v2
+        if: ${{ always() }}
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: "${{ inputs.projectName }} 小程序构建 ${{ job.status }} 🎉"
+                content:
+                  - - tag: text
+                      text: "环境: ${{ inputs.buildStage }}"
+                  - - tag: text
+                      text: "版本: ${{ steps.version.outputs.version }}"
+                  - - tag: a
+                      text: 查看详情
+                      href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
