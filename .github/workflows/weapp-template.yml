@@ -84,17 +84,17 @@ jobs:
         run: |
           echo "${{ secrets.wechatPrivateKey }}" > private.key
 
-      - name: 🚀 上传小程序代码
-        run: |
-          npx miniprogram-ci upload \
-            --pp ${{ inputs.workDir }}/dist/build/mp-weixin \
-            --pkp private.key \
-            --appid ${{ secrets.appId }} \
-            --uv ${{ steps.version.outputs.version }} \
-            -r 1 \
-            --enable-es6 true \
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
+          - name: 🚀 上传小程序代码
+          run: |
+            npx miniprogram-ci upload \
+              --pp ${{ inputs.workDir }}/dist/build/mp-weixin \
+              --pkp private.key \
+              --appid ${{ secrets.appId }} \
+              --uv ${{ steps.version.outputs.version }} \
+              -r 1 \
+              --enable-es6 true \
+          env:
+            NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: 🧹 清理私钥
         if: always()
@@ -109,7 +109,7 @@ jobs:
           content: |
             post:
               zh_cn:
-                title: "${{ inputs.projectName }} 小程序上传 ${{ job.status }}，去后台发布 🎉"
+                title: "${{ inputs.projectName }} 小程序上传 ${{ job.status }} ${{ job.status == 'success' && '去后台发布 🎉' || '失败 🚫' }}"
                 content:
                   - - tag: text
                       text: "环境: ${{ inputs.buildStage }}"
