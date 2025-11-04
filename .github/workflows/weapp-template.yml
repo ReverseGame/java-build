@@ -61,7 +61,7 @@ jobs:
       - name: 🧩 生成唯一版本号
         id: version
         run: |
-          VERSION="v$(date +'%Y%m%d.%H%M%S')"
+          VERSION="${{ inputs.buildStage }}.$(date +'%Y%m%d.%H%M%S')"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "🧱 自动生成版本号: $VERSION"
 
@@ -72,8 +72,13 @@ jobs:
       - run: pnpm install
 
       - name: 🏗️ 构建微信小程序
-        run: pnpm run build:mp-weixin
+        run: pnpm run build-beta:mp-weixin
         working-directory: ${{ inputs.workDir }}
+        if: ${{ inputs.buildStage == 'beta' }}
+
+      - run: pnpm run build:mp-weixin
+        working-directory: ${{ inputs.workDir }}
+        if: ${{ inputs.buildStage == 'product' }}
 
       - name: 🧱 保存微信小程序私钥
         run: |
