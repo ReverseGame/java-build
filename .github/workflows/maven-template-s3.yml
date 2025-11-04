@@ -218,7 +218,7 @@ jobs:
   deploy_local:
     if: inputs.buildStage == 'beta' && !inputs.oldCluster
     needs: java_reuse_build
-    runs-on: Linux
+    runs-on: local-server
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:
