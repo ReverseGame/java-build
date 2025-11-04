@@ -72,15 +72,15 @@ jobs:
             - name: Calculate MD5 hash
               id: calculate_md5
               run: |
-                  $md5 = Get-FileHash -Path ${{ inputs.output }}.exe -Algorithm SHA256
+                  $md5 = Get-FileHash -Path release/${{ inputs.output }}.exe -Algorithm SHA256
                   Write-Output "HASH=$($md5.Hash)" >> $Env:GITHUB_OUTPUT
             - name: compress
               run: |
-                  Compress-Archive -Path ${{ inputs.output }}.exe -DestinationPath ${{ inputs.output }}.zip
+                  Compress-Archive -Path release/${{ inputs.output }}.exe -DestinationPath ${{ inputs.output }}.zip
             - name: Upload executable
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.output }}-${{ steps.calculate_md5.outputs.HASH }}
+                  name: ${{ inputs.output }}
                   path: ${{ inputs.output }}.zip
         outputs:
             hash: ${{ steps.calculate_md5.outputs.HASH }}
@@ -92,7 +92,7 @@ jobs:
             - name: download artifact
               uses: actions/download-artifact@v4
               with:
-                  name: ${{ inputs.output }}-${{ needs.node_build.outputs.hash }}
+                  name: ${{ inputs.output }}
                   path: ./
             - name: 上传到 s3
               uses: keithweaver/aws-s3-github-action@v1.0.0

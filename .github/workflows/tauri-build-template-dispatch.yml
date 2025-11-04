@@ -49,21 +49,29 @@ jobs:
         run: |
           echo "client_payload sha: ${{ github.event.client_payload.sha }}"
           echo "client_payload pr_title: ${{ github.event.client_payload.message }}"
+          echo "client_payload repository: ${{ github.event.client_payload.repository }}"
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.patToken }}
           submodules: recursive
           fetch-depth: 0
-
+      - name: show dir list
+        run: ls -a
       - name: Update submodule SHAs
+        id: update_submodule
         run: |
           echo $(pwd)
           echo "master SHA: $(git rev-parse HEAD)"
-          repository=$(basename ReverseGame/reverse-bot-rs)
-          git -C $repository fetch origin ${{ github.event.client_payload.sha }}
-          git -C $repository checkout ${{ github.event.client_payload.sha }} --force
-          cd reverse-bot-rs 
+          repository="${{ github.event.client_payload.repository }}"
+          echo "Updating repository: $repository"
+          # 从完整仓库路径提取仓库名 (如: ReverseGame/reverse-proxy-test -> reverse-proxy-test)
+          repo_name=$(basename $repository)
+          echo "Local submodule path: $repo_name"
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+          git -C $repo_name fetch origin ${{ github.event.client_payload.sha }}
+          git -C $repo_name checkout ${{ github.event.client_payload.sha }} --force
+          cd $repo_name 
           git rev-parse HEAD
 
       - name: Setup Node.js  environment
@@ -76,6 +84,18 @@ jobs:
           npm install -g pnpm
           pnpm update-version
 
+      - name: Set PR body based on repository
+        id: pr_body
+        run: |
+          repo_name="${{ steps.update_submodule.outputs.repo_name }}"
+          if [ "$repo_name" == "reverse-bot-rs" ]; then
+            echo "body=xbot 内核更新" >> $GITHUB_OUTPUT
+          elif [ "$repo_name" == "reverse-proxy-test" ]; then
+            echo "body=代理测试模块更新" >> $GITHUB_OUTPUT
+          else
+            echo "body=优化已知问题" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         id: cpr
@@ -83,9 +103,17 @@ jobs:
           add-paths: |
             package.json
             src-tauri/*
-            reverse-bot-rs
-          commit-message: '[create-pull-request] ${{ github.event.client_payload.message }}'
-          title: '[create-pull-request] ${{ github.event.client_payload.message }}'
+            ${{ steps.update_submodule.outputs.repo_name }}
+          commit-message: "[create-pull-request] ${{ github.event.client_payload.message }}"
+          title: "[create-pull-request] ${{ github.event.client_payload.message }}"
+          body: "${{ steps.pr_body.outputs.body }}"
+
+      - name: Enable Pull Request Automerge
+        if: steps.cpr.outputs.pull-request-number != ''
+        run: |
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin --merge
+        env:
+          GH_TOKEN: ${{ secrets.patToken }}
 
       - name: post success message
         uses: foxundermoon/feishu-action@v2
@@ -95,7 +123,7 @@ jobs:
           content: |
             post:
               zh_cn:
-                title: PR待审核
+                title: PR 合并成功
                 content:
                 - - tag: text
                     text: 'PR链接: '
