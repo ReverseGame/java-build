@@ -453,21 +453,23 @@ jobs:
                   script: |
                       const version = process.env.VERSION
                       const tagName = `v${version}`
+                      const ref = `refs/tags/${tagName}`
                       
                       // 检查 tag 是否已存在
                       try {
-                          const { data: existingTag } = await github.rest.repos.getTag({
+                          await github.rest.git.getRef({
                               owner: context.repo.owner,
                               repo: context.repo.repo,
-                              tag: tagName
+                              ref: ref
                           })
                           console.log(`Tag ${tagName} 已存在，跳过创建`)
                           return
                       } catch (error) {
                           if (error.status !== 404) {
+                              // 如果不是 404 错误，说明有其他问题，抛出错误
                               throw error
                           }
-                          // Tag 不存在，继续创建
+                          // Tag 不存在（404），继续创建
                       }
                       
                       // 获取当前 commit SHA
@@ -478,15 +480,16 @@ jobs:
                           await github.rest.git.createRef({
                               owner: context.repo.owner,
                               repo: context.repo.repo,
-                              ref: `refs/tags/${tagName}`,
+                              ref: ref,
                               sha: sha
                           })
-                          console.log(`成功创建 tag: ${tagName}`)
+                          console.log(`成功创建 tag: ${tagName} (${sha})`)
                       } catch (error) {
-                          // 如果是因为 tag 已存在而失败，则忽略
-                          if (error.status === 422 && error.message?.includes('already exists')) {
+                          // 如果是因为 tag 已存在而失败（422），则忽略
+                          if (error.status === 422) {
                               console.log(`Tag ${tagName} 已存在，跳过创建`)
                           } else {
+                              // 其他错误则抛出
                               throw error
                           }
                       }
