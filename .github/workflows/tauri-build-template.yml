@@ -6,6 +6,7 @@ on:
             buildStage:
                 required: true
                 type: string
+                default: "product"
             nodeVersion:
                 required: false
                 type: string
@@ -29,6 +30,9 @@ on:
             platform:
                 required: true
                 type: string
+            releaseType:
+                required: true
+                type: string
         secrets:
             awsAccessKey:
                 required: true
@@ -48,7 +52,9 @@ jobs:
                     - platform: ${{ inputs.platform }}
                       os: "windows"
                       arch: "x86_64"
-                      args: ${{ inputs.buildStage == 'internal' && '-f internal --config ./src-tauri/tauri.conf.internal.json' || inputs.buildStage == 'beta' && '-f beta --config ./src-tauri/tauri.conf.beta.json' || inputs.buildStage == 'product' && '-f product --config ./src-tauri/tauri.conf.json' }}
+                      args: |
+                        -f ${{ inputs.buildStage }}
+                        --config ./src-tauri/tauri.conf.${{ inputs.releaseType }}.json
 
         runs-on: ${{ matrix.platform }}
         steps:
