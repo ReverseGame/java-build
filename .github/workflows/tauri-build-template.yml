@@ -78,13 +78,12 @@ jobs:
                       const version = require('./package.json').version
                       const tauriVersion = process.env.TAURI_VERSION
                       const buildStage = process.env.BUILD_STAGE
+                      const releaseType = process.env.RELEASE_TYPE
 
                       let configJsonPath = "./src-tauri/tauri.conf.json"
 
-                      if (buildStage === "internal") {
+                      if (releaseType === "internal") {
                         configJsonPath = "./src-tauri/tauri.conf.internal.json"
-                      } else if (buildStage === "beta") {
-                        configJsonPath = "./src-tauri/tauri.conf.beta.json"
                       }
 
 
