@@ -176,6 +176,16 @@ jobs:
                       console.log(`上级目录: ${parentDir}`)
                       return parentDir
 
+            - name: Resolve tauri config path
+              id: tauri-config
+              shell: pwsh
+              run: |
+                  if ("${{ inputs.buildStage }}" -eq "product") {
+                    "path=./src-tauri/tauri.conf.json" >> $Env:GITHUB_OUTPUT
+                  } else {
+                    "path=./src-tauri/tauri.conf.${{ inputs.releaseType }}.json" >> $Env:GITHUB_OUTPUT
+                  }
+
             - name: Build tauri (构建 tauri)
               id: build
               uses: tauri-apps/tauri-action@v0
@@ -189,7 +199,9 @@ jobs:
                   RUSTFLAGS: '--cfg env="${{ inputs.releaseType }}"'
                   CARGO_TARGET_DIR: "${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}"
               with:
-                  args: ${{ matrix.args }}
+                  args: |
+                      -f ${{ inputs.buildStage }}
+                      --config ${{ steps.tauri-config.outputs.path }}
 
             - name: Upload Artifact (上传构建产物)
               uses: actions/upload-artifact@v4
