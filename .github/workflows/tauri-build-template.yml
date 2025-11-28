@@ -204,7 +204,7 @@ jobs:
               with:
                   args: |
                       -f ${{ inputs.buildStage }}
-                      --config ${{ steps.tauri-config.outputs.path }}
+                      --config ${{ steps.tauri-config.outputs.result }}
 
             - name: Upload Artifact (上传构建产物)
               uses: actions/upload-artifact@v4
