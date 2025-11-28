@@ -242,6 +242,7 @@ jobs:
                   result-encoding: string
                   script: |
                       const buildStage = '${{ inputs.buildStage }}'
+                      const releaseType = '${{ inputs.releaseType }}'
                       const productInfo = JSON.parse(${{ toJSON(needs.build-tauri.outputs.product-info) }})
 
                       if (buildStage === 'product' && releaseType === 'product') {
@@ -475,9 +476,11 @@ jobs:
               env:
                   VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
                   BUILD_STAGE: ${{ inputs.buildStage }}
+                  RELEASE_TYPE: ${{ inputs.releaseType }}
               with:
                   script: |
                       const buildStage = process.env.BUILD_STAGE
+                      const releaseType = process.env.RELEASE_TYPE
                       
                       // 只有 product 环境才创建 tag
                       if (buildStage !== 'product' && releaseType !== 'product') {
