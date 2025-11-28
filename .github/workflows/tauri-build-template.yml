@@ -277,7 +277,7 @@ jobs:
                       if (releaseType === 'product') {
                         return buildStage
                       } else {
-                        return `${buildStage}-${releaseType}`
+                        return `${releaseType}-${buildStage}`
                       }
 
             - name: build install.json
