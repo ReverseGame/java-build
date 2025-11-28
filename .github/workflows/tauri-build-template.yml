@@ -33,6 +33,9 @@ on:
             releaseType:
                 required: true
                 type: string
+            awsPath:
+                required: true
+                type: string
         secrets:
             awsAccessKey:
                 required: true
@@ -181,12 +184,11 @@ jobs:
               with:
                   result-encoding: string
                   script: |
-                      const buildStage = '${{ inputs.buildStage }}'
                       const releaseType = '${{ inputs.releaseType }}'
-                      if (buildStage === 'product') {
+                      if (releaseType === 'product') {
                         return './src-tauri/tauri.conf.json'
                       }
-                      return `./src-tauri/tauri.conf.${releaseType}.json`
+                      return './src-tauri/tauri.conf.internal.json'
 
             - name: Build tauri (构建 tauri)
               id: build
@@ -265,21 +267,6 @@ jobs:
                         return '${{ github.sha }}'
                       }
 
-            - name: Generate Release Path
-              id: release-path
-              uses: actions/github-script@v7
-              with:
-                  result-encoding: string
-                  script: |
-                      const buildStage = '${{ inputs.buildStage }}'
-                      const releaseType = '${{ inputs.releaseType }}'
-                      
-                      if (releaseType === 'product') {
-                        return buildStage
-                      } else {
-                        return `${releaseType}-${buildStage}`
-                      }
-
             - name: build install.json
               uses: actions/github-script@v7
               id: install-info
@@ -289,6 +276,7 @@ jobs:
                   BUILD_STAGE: ${{ inputs.buildStage }}
                   RELEASE_TYPE: ${{ inputs.releaseType }}
                   BUCKET: ${{ inputs.bucket }}
+                  AWS_PATH: ${{ inputs.awsPath }}
                   RANDOM_PATH: ${{ steps.random-path.outputs.result }}
               with:
                   result-encoding: json
@@ -302,6 +290,7 @@ jobs:
                       const releaseType = process.env.RELEASE_TYPE
                       const bucket = process.env.BUCKET
                       const randomPath = process.env.RANDOM_PATH
+                      const awsPath = process.env.AWS_PATH
 
                       console.log(fs.readdirSync(`./releases`))
                       const releases = fs.readdirSync(`./releases/${productName}`)
@@ -372,15 +361,13 @@ jobs:
                         notes = '优化已知问题'
                       }
 
-                      const releasePath = releaseType === 'product' ? buildStage : `${buildStage}-${releaseType}`
-
                       const updateData = {
                         version: `v${version}`,
                         notes,
                         pub_date: new Date().toISOString(),
                         platforms: {
                           "windows-x86_64": {
-                            url: `https://${bucket}.s3.amazonaws.com/${productName}/${releasePath}/${randomPath}/${windowsApp}`,
+                            url: `https://${bucket}.s3.amazonaws.com/${awsPath}/${randomPath}/${windowsApp}`,
                             signature: windowsSigContent
                           }
                         }
@@ -395,7 +382,7 @@ jobs:
               uses: keithweaver/aws-s3-github-action@v1.0.0
               with:
                   source: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/
-                  destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ steps.release-path.outputs.result }}/${{ steps.random-path.outputs.result }}/
+                  destination: s3://${{ inputs.bucket }}/${{ inputs.awsPath }}/${{ steps.random-path.outputs.result }}/
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -406,7 +393,7 @@ jobs:
               uses: keithweaver/aws-s3-github-action@v1.0.0
               with:
                   source: ./releases/install.json
-                  destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/install.json
+                  destination: s3://${{ inputs.bucket }}/${{ inputs.awsPath }}/install.json
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
