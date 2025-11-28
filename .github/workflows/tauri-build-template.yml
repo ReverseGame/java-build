@@ -75,6 +75,7 @@ jobs:
               env:
                   TAURI_VERSION: ${{ inputs.tauriVersion }}
                   BUILD_STAGE: ${{ inputs.buildStage }}
+                  RELEASE_TYPE: ${{ inputs.releaseType }}
               with:
                   result-encoding: json
                   script: |
