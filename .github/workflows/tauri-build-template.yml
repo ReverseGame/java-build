@@ -186,8 +186,8 @@ jobs:
                   TAURI_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
                   TAURI_SIGNING_PRIVATE_KEY: ${{ vars.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-                  RUSTFLAGS: '--cfg env="${{ inputs.buildStage }}"'
-                  CARGO_TARGET_DIR: "${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}"
+                  RUSTFLAGS: '--cfg env="${{ inputs.releaseType }}"'
+                  CARGO_TARGET_DIR: "${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}"
               with:
                   args: ${{ matrix.args }}
 
@@ -200,8 +200,8 @@ jobs:
                   overwrite: true
                   name: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
                   path: |
-                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
-                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
 
             - name: Post Message (发送飞书 Webhook 消息)
               uses: Comori/feishu@v0.0.5
@@ -213,7 +213,7 @@ jobs:
                   cardkit-version: 0.0.3
                   content: |
                       title=${{ fromJson(steps.product-info.outputs.result).productName }} ${{ fromJson(steps.product-info.outputs.result).version }} ${{ matrix.os }} ${{ job.status }}
-                      sub_title=构建流程: ${{ inputs.buildStage }}
+                      sub_title=构建版本: ${{ inputs.releaseType }} - ${{ inputs.buildStage }}
                       content=${{ steps.message-content.outputs.result }}
 
     publish:
@@ -244,10 +244,25 @@ jobs:
                       const buildStage = '${{ inputs.buildStage }}'
                       const productInfo = JSON.parse(${{ toJSON(needs.build-tauri.outputs.product-info) }})
 
-                      if (buildStage === 'product') {
+                      if (buildStage === 'product' && releaseType === 'product') {
                         return productInfo.version
                       } else {
                         return '${{ github.sha }}'
+                      }
+
+            - name: Generate Release Path
+              id: release-path
+              uses: actions/github-script@v7
+              with:
+                  result-encoding: string
+                  script: |
+                      const buildStage = '${{ inputs.buildStage }}'
+                      const releaseType = '${{ inputs.releaseType }}'
+                      
+                      if (releaseType === 'product') {
+                        return buildStage
+                      } else {
+                        return `${buildStage}-${releaseType}`
                       }
 
             - name: build install.json
@@ -257,6 +272,7 @@ jobs:
                   VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
                   PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
                   BUILD_STAGE: ${{ inputs.buildStage }}
+                  RELEASE_TYPE: ${{ inputs.releaseType }}
                   BUCKET: ${{ inputs.bucket }}
                   RANDOM_PATH: ${{ steps.random-path.outputs.result }}
               with:
@@ -268,6 +284,7 @@ jobs:
                       const version = process.env.VERSION
                       const productName = process.env.PRODUCT_NAME
                       const buildStage = process.env.BUILD_STAGE
+                      const releaseType = process.env.RELEASE_TYPE
                       const bucket = process.env.BUCKET
                       const randomPath = process.env.RANDOM_PATH
 
@@ -340,13 +357,15 @@ jobs:
                         notes = '优化已知问题'
                       }
 
+                      const releasePath = releaseType === 'product' ? buildStage : `${buildStage}-${releaseType}`
+
                       const updateData = {
                         version: `v${version}`,
                         notes,
                         pub_date: new Date().toISOString(),
                         platforms: {
                           "windows-x86_64": {
-                            url: `https://${bucket}.s3.amazonaws.com/${productName}/${buildStage}/${randomPath}/${windowsApp}`,
+                            url: `https://${bucket}.s3.amazonaws.com/${productName}/${releasePath}/${randomPath}/${windowsApp}`,
                             signature: windowsSigContent
                           }
                         }
@@ -361,7 +380,7 @@ jobs:
               uses: keithweaver/aws-s3-github-action@v1.0.0
               with:
                   source: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/
-                  destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ inputs.buildStage }}/${{ steps.random-path.outputs.result }}/
+                  destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ steps.release-path.outputs.result }}/${{ steps.random-path.outputs.result }}/
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -461,7 +480,7 @@ jobs:
                       const buildStage = process.env.BUILD_STAGE
                       
                       // 只有 product 环境才创建 tag
-                      if (buildStage !== 'product') {
+                      if (buildStage !== 'product' && releaseType !== 'product') {
                           console.log(`当前构建阶段为 ${buildStage}，跳过创建 tag（仅 product 环境创建 tag）`)
                           return
                       }
