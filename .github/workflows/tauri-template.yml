@@ -32,6 +32,9 @@ on:
         required: true
       tauriKeyPassword:
         required: true
+      githubToken:
+        required: false
+        description: "GitHub token for accessing private submodules"
 
 jobs:
   build-tauri:
@@ -56,6 +59,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          token: ${{ secrets.githubToken || secrets.GITHUB_TOKEN }}
 
       - name: Get Project Info
         id: product-info
