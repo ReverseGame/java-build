@@ -54,6 +54,8 @@ jobs:
     steps:
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Get Project Info
         id: product-info
