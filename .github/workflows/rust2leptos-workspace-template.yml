@@ -98,7 +98,7 @@ jobs:
       - name: Install leptos
         run: |
           mkdir -p ~/.cargo/bin
-          wget -P ~/.cargo/bin https://s3-maven.s3.us-east-1.amazonaws.com/binary/cargo-leptos
+          wget -P ~/.cargo/bin https://ipoasis-pic.s3.us-east-1.amazonaws.com/binary/cargo-leptos
           sudo chmod +x ~/.cargo/bin/cargo-leptos
           wget -P ~/.cargo/bin https://ipoasis-pic.s3.us-east-1.amazonaws.com/binary/trunk
           sudo chmod +x ~/.cargo/bin/trunk
