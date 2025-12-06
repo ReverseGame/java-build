@@ -125,7 +125,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build Release
-        run: cargo leptos build --release
+        run: cargo leptos build --release --split
       - name: show target
         run: ls -l target/release/ 
       - name: Login to DockerHub
