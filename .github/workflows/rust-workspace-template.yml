@@ -152,7 +152,7 @@ jobs:
   deploy_local:
     if: inputs.buildStage == 'beta'
     needs: build-rust
-    runs-on: linux
+    runs-on: local-server
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
     steps:

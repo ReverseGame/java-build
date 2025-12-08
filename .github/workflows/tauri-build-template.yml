@@ -6,6 +6,7 @@ on:
             buildStage:
                 required: true
                 type: string
+                default: "product"
             nodeVersion:
                 required: false
                 type: string
@@ -29,6 +30,12 @@ on:
             platform:
                 required: true
                 type: string
+            releaseType:
+                required: true
+                type: string
+            awsPath:
+                required: true
+                type: string
         secrets:
             awsAccessKey:
                 required: true
@@ -48,7 +55,9 @@ jobs:
                     - platform: ${{ inputs.platform }}
                       os: "windows"
                       arch: "x86_64"
-                      args: ${{ inputs.buildStage == 'dev' && '-f dev --config ./src-tauri/tauri.conf.dev.json' || inputs.buildStage == 'beta' && '-f beta --config ./src-tauri/tauri.conf.beta.json' || inputs.buildStage == 'product' && '-f product --config ./src-tauri/tauri.conf.json' }}
+                      args: |
+                        -f ${{ inputs.buildStage }}
+                        --config ./src-tauri/tauri.conf.${{ inputs.releaseType }}.json
 
         runs-on: ${{ matrix.platform }}
         steps:
@@ -66,19 +75,19 @@ jobs:
               env:
                   TAURI_VERSION: ${{ inputs.tauriVersion }}
                   BUILD_STAGE: ${{ inputs.buildStage }}
+                  RELEASE_TYPE: ${{ inputs.releaseType }}
               with:
                   result-encoding: json
                   script: |
                       const version = require('./package.json').version
                       const tauriVersion = process.env.TAURI_VERSION
                       const buildStage = process.env.BUILD_STAGE
+                      const releaseType = process.env.RELEASE_TYPE
 
                       let configJsonPath = "./src-tauri/tauri.conf.json"
 
-                      if (buildStage === "dev") {
-                        configJsonPath = "./src-tauri/tauri.conf.dev.json"
-                      } else if (buildStage === "beta") {
-                        configJsonPath = "./src-tauri/tauri.conf.beta.json"
+                      if (releaseType === "internal") {
+                        configJsonPath = "./src-tauri/tauri.conf.internal.json"
                       }
 
 
@@ -170,6 +179,18 @@ jobs:
                       console.log(`上级目录: ${parentDir}`)
                       return parentDir
 
+            - name: Resolve tauri config path
+              id: tauri-config
+              uses: actions/github-script@v7
+              with:
+                  result-encoding: string
+                  script: |
+                      const releaseType = '${{ inputs.releaseType }}'
+                      if (releaseType === 'product') {
+                        return './src-tauri/tauri.conf.json'
+                      }
+                      return './src-tauri/tauri.conf.internal.json'
+
             - name: Build tauri (构建 tauri)
               id: build
               uses: tauri-apps/tauri-action@v0
@@ -180,10 +201,12 @@ jobs:
                   TAURI_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
                   TAURI_SIGNING_PRIVATE_KEY: ${{ vars.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-                  RUSTFLAGS: '--cfg env="${{ inputs.buildStage }}"'
-                  CARGO_TARGET_DIR: "${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}"
+                  RUSTFLAGS: '--cfg env="${{ inputs.releaseType }}"'
+                  CARGO_TARGET_DIR: "${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}"
               with:
-                  args: ${{ matrix.args }}
+                  args: |
+                      -f ${{ inputs.buildStage }}
+                      --config ${{ steps.tauri-config.outputs.result }}
 
             - name: Upload Artifact (上传构建产物)
               uses: actions/upload-artifact@v4
@@ -194,8 +217,8 @@ jobs:
                   overwrite: true
                   name: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
                   path: |
-                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
-                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.buildStage }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
 
             - name: Post Message (发送飞书 Webhook 消息)
               uses: Comori/feishu@v0.0.5
@@ -207,7 +230,7 @@ jobs:
                   cardkit-version: 0.0.3
                   content: |
                       title=${{ fromJson(steps.product-info.outputs.result).productName }} ${{ fromJson(steps.product-info.outputs.result).version }} ${{ matrix.os }} ${{ job.status }}
-                      sub_title=构建流程: ${{ inputs.buildStage }}
+                      sub_title=构建版本: ${{ inputs.releaseType }} - ${{ inputs.buildStage }}
                       content=${{ steps.message-content.outputs.result }}
 
     publish:
@@ -236,9 +259,10 @@ jobs:
                   result-encoding: string
                   script: |
                       const buildStage = '${{ inputs.buildStage }}'
+                      const releaseType = '${{ inputs.releaseType }}'
                       const productInfo = JSON.parse(${{ toJSON(needs.build-tauri.outputs.product-info) }})
 
-                      if (buildStage === 'product') {
+                      if (buildStage === 'product' && releaseType === 'product') {
                         return productInfo.version
                       } else {
                         return '${{ github.sha }}'
@@ -251,7 +275,9 @@ jobs:
                   VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
                   PRODUCT_NAME: ${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
                   BUILD_STAGE: ${{ inputs.buildStage }}
+                  RELEASE_TYPE: ${{ inputs.releaseType }}
                   BUCKET: ${{ inputs.bucket }}
+                  AWS_PATH: ${{ inputs.awsPath }}
                   RANDOM_PATH: ${{ steps.random-path.outputs.result }}
               with:
                   result-encoding: json
@@ -262,8 +288,10 @@ jobs:
                       const version = process.env.VERSION
                       const productName = process.env.PRODUCT_NAME
                       const buildStage = process.env.BUILD_STAGE
+                      const releaseType = process.env.RELEASE_TYPE
                       const bucket = process.env.BUCKET
                       const randomPath = process.env.RANDOM_PATH
+                      const awsPath = process.env.AWS_PATH
 
                       console.log(fs.readdirSync(`./releases`))
                       const releases = fs.readdirSync(`./releases/${productName}`)
@@ -340,7 +368,7 @@ jobs:
                         pub_date: new Date().toISOString(),
                         platforms: {
                           "windows-x86_64": {
-                            url: `https://${bucket}.s3.amazonaws.com/${productName}/${buildStage}/${randomPath}/${windowsApp}`,
+                            url: `https://${bucket}.s3.amazonaws.com/${awsPath}/${randomPath}/${windowsApp}`,
                             signature: windowsSigContent
                           }
                         }
@@ -355,7 +383,7 @@ jobs:
               uses: keithweaver/aws-s3-github-action@v1.0.0
               with:
                   source: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/
-                  destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/${{ inputs.buildStage }}/${{ steps.random-path.outputs.result }}/
+                  destination: s3://${{ inputs.bucket }}/${{ inputs.awsPath }}/${{ steps.random-path.outputs.result }}/
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -366,7 +394,7 @@ jobs:
               uses: keithweaver/aws-s3-github-action@v1.0.0
               with:
                   source: ./releases/install.json
-                  destination: s3://${{ inputs.bucket }}/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}/install.json
+                  destination: s3://${{ inputs.bucket }}/${{ inputs.awsPath }}/install.json
                   aws_access_key_id: ${{ secrets.awsAccessKey }}
                   aws_secret_access_key: ${{ secrets.awsSecretKey }}
                   aws_region: ${{ inputs.awsRegion }}
@@ -443,3 +471,66 @@ jobs:
                   content: |
                       title=${{ fromJson(needs.build-tauri.outputs.product-info).productName }} ${{ fromJson(needs.build-tauri.outputs.product-info).version }} 发布成功
                       content=${{ steps.message-content.outputs.result }}
+
+            - name: Create GitHub Tag (创建 GitHub Tag)
+              if: success()
+              uses: actions/github-script@v7
+              env:
+                  VERSION: ${{ fromJson(needs.build-tauri.outputs.product-info).version }}
+                  BUILD_STAGE: ${{ inputs.buildStage }}
+                  RELEASE_TYPE: ${{ inputs.releaseType }}
+              with:
+                  script: |
+                      const buildStage = process.env.BUILD_STAGE
+                      const releaseType = process.env.RELEASE_TYPE
+                      
+                      // 只有 product 环境才创建 tag
+                      if (buildStage !== 'product' && releaseType !== 'product') {
+                          console.log(`当前构建阶段为 ${buildStage}，跳过创建 tag（仅 product 环境创建 tag）`)
+                          return
+                      }
+                      
+                      const version = process.env.VERSION
+                      const tagName = `v${version}`
+                      const ref = `refs/tags/${tagName}`
+                      
+                      console.log(`开始创建 tag: ${tagName} (构建阶段: ${buildStage})`)
+                      
+                      // 检查 tag 是否已存在
+                      try {
+                          await github.rest.git.getRef({
+                              owner: context.repo.owner,
+                              repo: context.repo.repo,
+                              ref: ref
+                          })
+                          console.log(`Tag ${tagName} 已存在，跳过创建`)
+                          return
+                      } catch (error) {
+                          if (error.status !== 404) {
+                              // 如果不是 404 错误，说明有其他问题，抛出错误
+                              throw error
+                          }
+                          // Tag 不存在（404），继续创建
+                      }
+                      
+                      // 获取当前 commit SHA
+                      const sha = context.sha
+                      
+                      // 创建 tag
+                      try {
+                          await github.rest.git.createRef({
+                              owner: context.repo.owner,
+                              repo: context.repo.repo,
+                              ref: ref,
+                              sha: sha
+                          })
+                          console.log(`✅ 成功创建 tag: ${tagName} (${sha})`)
+                      } catch (error) {
+                          // 如果是因为 tag 已存在而失败（422），则忽略
+                          if (error.status === 422) {
+                              console.log(`Tag ${tagName} 已存在，跳过创建`)
+                          } else {
+                              // 其他错误则抛出
+                              throw error
+                          }
+                      }
