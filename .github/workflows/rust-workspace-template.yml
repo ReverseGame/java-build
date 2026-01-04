@@ -120,6 +120,8 @@ jobs:
           git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "git@github.com:"
 
       - name: Build Release
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: true
         run: cargo build --release --bin ${{ inputs.packageName }}
       - name: show target
         run: ls -l target/release/
