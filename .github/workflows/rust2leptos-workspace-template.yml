@@ -18,15 +18,15 @@ on:
       dockerDir:
         required: false
         type: string
-        default: ""
+        default: ''
       dockerfile:
         required: false
         type: string
-        default: "Dockerfile"
+        default: 'Dockerfile'
       k8sfile:
         required: false
         type: string
-        default: "k8s"
+        default: 'k8s'
       projectPrefix:
         required: true
         type: string
@@ -57,14 +57,12 @@ on:
         required: false
       awsSecretKey:
         required: false
-      GH_PAT:
-        required: false
 
 jobs:
   build-rust:
     strategy:
       matrix:
-        platform: [ubuntu-22.04]
+        platform: [ ubuntu-22.04 ]
     runs-on: ${{ matrix.platform }}
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
@@ -92,9 +90,24 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "23.x"
+          version: '23.x'
       - name: Install Rust
         run: rustup toolchain install stable --component llvm-tools-preview
+      - name: Install wasm32-unknown-unknown
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install leptos
+        run: |
+          mkdir -p ~/.cargo/bin
+          wget -P ~/.cargo/bin https://ipoasis-pic.s3.us-east-1.amazonaws.com/binary/cargo-leptos
+          sudo chmod +x ~/.cargo/bin/cargo-leptos
+          wget -P ~/.cargo/bin https://ipoasis-pic.s3.us-east-1.amazonaws.com/binary/trunk
+          sudo chmod +x ~/.cargo/bin/trunk
+          wget -P ~/.cargo/bin https://ipoasis-pic.s3.us-east-1.amazonaws.com/binary/wasm-opt
+          sudo chmod +x ~/.cargo/bin/wasm-opt
+#          cargo install wasm-opt
+#          cargo install trunk
+#          cargo install --locked cargo-leptos
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Install openssl
@@ -111,16 +124,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Use PAT for private git deps
-        if: ${{ secrets.GH_PAT != '' }}
-        run: |
-          git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
-          git config --global url."https://x-access-token:${{ secrets.GH_PAT }}@github.com/".insteadOf "git@github.com:"
-
       - name: Build Release
-        run: cargo build --release --bin ${{ inputs.packageName }}
+        run: cargo leptos build --release --split
       - name: show target
-        run: ls -l target/release/
+        run: ls -l target/release/ 
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -310,7 +317,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.awsSecretKey }}
           aws-region: ${{ env.aws_region }}
       - uses: actions/checkout@v3
-      - name: create
+      - name: create 
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}

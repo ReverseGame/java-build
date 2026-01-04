@@ -121,7 +121,7 @@ jobs:
   deploy_local:
     if: inputs.buildStage == 'beta' && !inputs.eks
     needs: node_build
-    runs-on: Linux
+    runs-on: local-server
     strategy:
       matrix:
         node-version: [ 18.x ]
