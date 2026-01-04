@@ -111,29 +111,32 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Enable cargo net.git-fetch-with-cli
+        shell: bash
+        run: |
+          mkdir -p "${CARGO_HOME:-$HOME/.cargo}"
+          cat > "${CARGO_HOME:-$HOME/.cargo}/config.toml" <<'EOF'
+          [net]
+          git-fetch-with-cli = true
+          EOF
+          echo "Cargo config:"
+          cat "${CARGO_HOME:-$HOME/.cargo}/config.toml"
+
       - name: Use PAT for private git deps
         shell: bash
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           if [ -n "$GH_PAT" ]; then
-            git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
-            git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "git@github.com:"
-            git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "ssh://git@github.com/"
-            mkdir -p "${CARGO_HOME:-$HOME/.cargo}"
-            cat >> "${CARGO_HOME:-$HOME/.cargo}/config.toml" <<'EOF'
-            [net]
-            git-fetch-with-cli = true
-            EOF
-            echo "Cargo config:"
-            cat "${CARGO_HOME:-$HOME/.cargo}/config.toml"
+            git config --global --add url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
+            git config --global --add url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "git@github.com:"
+            git config --global --add url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "ssh://git@github.com/"
+            git config --global --add url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "ssh://github.com/"
           else
             echo "GH_PAT not set; skip private deps auth"
           fi
 
       - name: Build Release
-        env:
-          CARGO_NET_GIT_FETCH_WITH_CLI: true
         run: cargo build --release --bin ${{ inputs.packageName }}
       - name: show target
         run: ls -l target/release/
