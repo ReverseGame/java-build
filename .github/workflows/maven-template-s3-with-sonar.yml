@@ -1,0 +1,70 @@
+name: maven-template-s3-with-sonar.yml
+on:
+  workflow_call:
+    inputs:
+      workDir:
+        description: "pom.xml 所在目录"
+        required: true
+        type: string
+
+      sonarProjectKey:
+        required: true
+        type: string
+
+      sonarProjectName:
+        required: true
+        type: string
+
+    secrets:
+      mavenUsername:
+        required: true
+      mavenPassword:
+        required: true
+
+      SONAR_TOKEN:
+        required: true
+      SONAR_HOST_URL:
+        required: true
+
+jobs:
+  build-sonar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "11"
+          distribution: temurin
+          cache: maven
+
+      - name: maven-settings-xml-action
+        uses: whelk-io/maven-settings-xml-action@v20
+        with:
+          repositories: '[{ "id": "maven-s3-snapshots-repo", "name": "maven-s3-snapshots-repo", "url": "s3://s3-maven/snapshots/", "releases": { "enabled": false }, "snapshots": { "enabled": true } }, { "id": "maven-s3-releases-repo", "name": "maven-s3-releases-repo", "url": "s3://s3-maven/releases/", "releases": { "enabled": true }, "snapshots": { "enabled": false } }]'
+          servers: '[{ "id": "maven-s3-snapshots-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }, { "id": "maven-s3-releases-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Build & SonarQube Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          mvn -B \
+            -f ${{ inputs.workDir }}/pom.xml \
+            clean verify \
+            org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.projectKey=${{ inputs.sonarProjectKey }} \
+            -Dsonar.projectName=${{ inputs.sonarProjectName }} \
+            -Dsonar.host.url=${SONAR_HOST_URL} \
+            -Dsonar.login=${SONAR_TOKEN}
