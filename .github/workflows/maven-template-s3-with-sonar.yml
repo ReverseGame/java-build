@@ -59,7 +59,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           mvn -B \
             -f ${{ inputs.workDir }}/pom.xml \
@@ -69,7 +68,4 @@ jobs:
             -Dsonar.projectName=${{ inputs.sonarProjectName }} \
             -Dsonar.host.url=${SONAR_HOST_URL} \
             -Dsonar.login=${SONAR_TOKEN} \
-            -Dmaven.test.skip=true \
-            -Dsonar.pullrequest.key=${GITHUB_PR_NUMBER} \
-            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
-            -Dsonar.pullrequest.base=${{ github.base_ref }}
+            -Dmaven.test.skip=true 
