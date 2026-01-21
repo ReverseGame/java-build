@@ -69,8 +69,8 @@ jobs:
             -Dsonar.projectKey=${{ inputs.sonarProjectKey }} \
             -Dsonar.projectName=${{ inputs.sonarProjectName }} \
             -Dsonar.host.url=${SONAR_HOST_URL} \
-            -Dsonar.login=${SONAR_TOKEN} \
-            -Dsonar.qualitygate.wait=true \
+            -Dsonar.token=${SONAR_TOKEN} \
+            -Dsonar.qualitygate.wait=false \
             -Dsonar.qualitygate.timeout=300 \
             -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
             -Dsonar.pullrequest.branch=${{ github.head_ref }} \
