@@ -1,4 +1,5 @@
 name: maven-template-s3-with-sonar.yml
+
 on:
   workflow_call:
     inputs:
@@ -48,6 +49,7 @@ jobs:
         with:
           repositories: '[{ "id": "maven-s3-snapshots-repo", "name": "maven-s3-snapshots-repo", "url": "s3://s3-maven/snapshots/", "releases": { "enabled": false }, "snapshots": { "enabled": true } }, { "id": "maven-s3-releases-repo", "name": "maven-s3-releases-repo", "url": "s3://s3-maven/releases/", "releases": { "enabled": true }, "snapshots": { "enabled": false } }]'
           servers: '[{ "id": "maven-s3-snapshots-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }, { "id": "maven-s3-releases-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
+
       - name: Cache SonarQube packages
         uses: actions/cache@v4
         with:
@@ -68,4 +70,10 @@ jobs:
             -Dsonar.projectName=${{ inputs.sonarProjectName }} \
             -Dsonar.host.url=${SONAR_HOST_URL} \
             -Dsonar.login=${SONAR_TOKEN} \
-            -Dmaven.test.skip=true 
+            -Dsonar.qualitygate.wait=true \
+            -Dsonar.qualitygate.timeout=300 \
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+            -Dsonar.pullrequest.base=${{ github.base_ref }} \
+            -Dsonar.pullrequest.github.repository=${{ github.repository }} \
+            -Dmaven.test.skip=true
