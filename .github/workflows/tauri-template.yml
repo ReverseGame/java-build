@@ -61,6 +61,7 @@ jobs:
           submodules: recursive
           token: ${{ secrets.githubToken || secrets.GITHUB_TOKEN }}
       - name: Enable cargo net.git-fetch-with-cli
+        if: matrix.os != 'windows'
         shell: bash
         run: |
             mkdir -p "${CARGO_HOME:-$HOME/.cargo}"
@@ -71,6 +72,7 @@ jobs:
             echo "Cargo config:"
             cat "${CARGO_HOME:-$HOME/.cargo}/config.toml"
       - name: Use PAT for private git deps
+        if: matrix.os != 'windows'
         shell: bash
         env:
           GH_PAT: ${{ secrets.githubToken || secrets.GITHUB_TOKEN }}
