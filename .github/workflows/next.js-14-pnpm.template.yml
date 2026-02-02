@@ -89,6 +89,7 @@ jobs:
           envkey_NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
           envkey_NEXT_PUBLIC_KLAVIYO_PUBLIC_API_KEY: ${{ vars.NEXT_PUBLIC_KLAVIYO_PUBLIC_API_KEY }}
           envkey_NEXT_PUBLIC_AW: ${{ vars.NEXT_PUBLIC_AW }}
+          envkey_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           path: .env
 
       - uses: pnpm/action-setup@v4
