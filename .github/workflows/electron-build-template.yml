@@ -269,6 +269,7 @@ jobs:
               env:
                   BACKEND_SERVER_URL: ${{ inputs.backendServerUrl }}
                   BYPASS_API_URL: ${{ inputs.bypassApiUrl }}
+                  BUILD_STAGE: ${{ inputs.buildStage }}
 
             - name: Configure update URL (配置更新 URL 和文件名)
               id: configure_build
