@@ -248,7 +248,7 @@ jobs:
                       ${{ runner.os }}-pnpm-store-
 
             - name: Install dependencies (安装依赖)
-              run: pnpm install --frozen-lockfile
+              run: pnpm install
 
             - name: Build Electron app (构建 Electron 主进程)
               run: pnpm run build:electron
