@@ -41,8 +41,6 @@ on:
                 required: false
             GH_PAT:
                 required: false
-                type: string
-                default: ""
 
 jobs:
     build_rust:
