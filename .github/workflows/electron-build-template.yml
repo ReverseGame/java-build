@@ -270,6 +270,46 @@ jobs:
                   BACKEND_SERVER_URL: ${{ inputs.backendServerUrl }}
                   BYPASS_API_URL: ${{ inputs.bypassApiUrl }}
 
+            - name: Configure update URL (配置更新 URL 和文件名)
+              id: configure_build
+              uses: actions/github-script@v7
+              env:
+                  BUILD_STAGE: ${{ inputs.buildStage }}
+                  BUCKET: ${{ inputs.bucket }}
+                  AWS_PATH: ${{ inputs.awsPath }}
+              with:
+                  script: |
+                      const fs = require('fs')
+                      const packageJson = require('./package.json')
+
+                      const buildStage = process.env.BUILD_STAGE
+                      const bucket = process.env.BUCKET
+                      const awsPath = process.env.AWS_PATH
+
+                      // 根据环境设置更新 URL 和文件名
+                      const s3Dir = buildStage === 'product' ? 'releases' : 'releases-beta'
+                      const channel = buildStage === 'product' ? 'latest' : 'beta'
+                      const fileSuffix = buildStage === 'product' ? '' : '-beta'
+
+                      // 设置 publish 配置
+                      packageJson.build.publish = [{
+                        provider: 'generic',
+                        url: `https://${bucket}.s3.amazonaws.com/${awsPath}/${s3Dir}`,
+                        channel: channel
+                      }]
+
+                      // 设置文件名格式（Beta 版本带 -beta 后缀）
+                      packageJson.build.nsis.artifactName = `\${productName}-\${version}${fileSuffix}-Setup.\${ext}`
+
+                      fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2))
+
+                      // 输出文件名后缀供后续步骤使用
+                      core.setOutput('FILE_SUFFIX', fileSuffix)
+
+                      console.log(`更新 URL: https://${bucket}.s3.amazonaws.com/${awsPath}/${s3Dir}`)
+                      console.log(`Channel: ${channel}`)
+                      console.log(`文件名后缀: ${fileSuffix}`)
+
             - name: Package with electron-builder (打包)
               run: pnpm exec electron-builder --win --x64
               env:
@@ -293,10 +333,10 @@ jobs:
             - name: Upload artifacts (上传构建产物)
               uses: actions/upload-artifact@v4
               with:
-                  name: windows-installer-${{ steps.final_version.outputs.FINAL_VERSION }}
+                  name: windows-installer-${{ steps.final_version.outputs.FINAL_VERSION }}${{ steps.configure_build.outputs.FILE_SUFFIX }}
                   path: |
-                      dist/Xtool-${{ steps.final_version.outputs.FINAL_VERSION }}-Setup.exe
-                      dist/latest.yml
+                      dist/Xtool-${{ steps.final_version.outputs.FINAL_VERSION }}${{ steps.configure_build.outputs.FILE_SUFFIX }}-Setup.exe
+                      dist/*.yml
                   retention-days: 7
 
     publish:
@@ -326,20 +366,18 @@ jobs:
               uses: actions/github-script@v7
               env:
                   BUILD_STAGE: ${{ inputs.buildStage }}
-                  COMMIT_SHA: ${{ github.sha }}
               with:
                   script: |
                       const buildStage = process.env.BUILD_STAGE
-                      const commitSha = process.env.COMMIT_SHA
 
                       if (buildStage === 'product') {
                         core.setOutput('S3_DIR', 'releases')
                         core.setOutput('YML_FILE', 'latest.yml')
+                        core.setOutput('FILE_SUFFIX', '')
                       } else {
-                        // Beta 使用随机路径防止公网暴露
-                        const randomPath = commitSha.substring(0, 8)
-                        core.setOutput('S3_DIR', `releases-beta/${randomPath}`)
+                        core.setOutput('S3_DIR', 'releases-beta')
                         core.setOutput('YML_FILE', 'beta.yml')
+                        core.setOutput('FILE_SUFFIX', '-beta')
                       }
 
             - name: Download artifacts (下载构建产物)
@@ -393,8 +431,8 @@ jobs:
             - name: Upload to AWS S3 (上传到 S3)
               run: |
                   # 上传安装包
-                  aws s3 cp "./releases/Xtool-${{ steps.get_version.outputs.VERSION }}-Setup.exe" \
-                    "s3://${{ inputs.bucket }}/${{ inputs.awsPath }}/${{ steps.s3_dir.outputs.S3_DIR }}/Xtool-${{ steps.get_version.outputs.VERSION }}-Setup.exe" \
+                  aws s3 cp "./releases/Xtool-${{ steps.get_version.outputs.VERSION }}${{ steps.s3_dir.outputs.FILE_SUFFIX }}-Setup.exe" \
+                    "s3://${{ inputs.bucket }}/${{ inputs.awsPath }}/${{ steps.s3_dir.outputs.S3_DIR }}/Xtool-${{ steps.get_version.outputs.VERSION }}${{ steps.s3_dir.outputs.FILE_SUFFIX }}-Setup.exe" \
                     --acl public-read
 
                   # 根据发布类型上传 yml 文件
@@ -403,8 +441,8 @@ jobs:
                       "s3://${{ inputs.bucket }}/${{ inputs.awsPath }}/${{ steps.s3_dir.outputs.S3_DIR }}/latest.yml" \
                       --acl public-read
                   else
-                    # Beta 环境需要重命名 latest.yml 为 beta.yml
-                    aws s3 cp "./releases/latest.yml" \
+                    # Beta 环境上传 beta.yml
+                    aws s3 cp "./releases/beta.yml" \
                       "s3://${{ inputs.bucket }}/${{ inputs.awsPath }}/${{ steps.s3_dir.outputs.S3_DIR }}/beta.yml" \
                       --acl public-read
                   fi
@@ -417,10 +455,11 @@ jobs:
                   AWS_PATH: ${{ inputs.awsPath }}
                   S3_DIR: ${{ steps.s3_dir.outputs.S3_DIR }}
                   VERSION: ${{ steps.get_version.outputs.VERSION }}
+                  FILE_SUFFIX: ${{ steps.s3_dir.outputs.FILE_SUFFIX }}
               with:
                   script: |
-                      const { BUCKET, AWS_PATH, S3_DIR, VERSION } = process.env
-                      const url = `https://${BUCKET}.s3.amazonaws.com/${AWS_PATH}/${S3_DIR}/Xtool-${VERSION}-Setup.exe`
+                      const { BUCKET, AWS_PATH, S3_DIR, VERSION, FILE_SUFFIX } = process.env
+                      const url = `https://${BUCKET}.s3.amazonaws.com/${AWS_PATH}/${S3_DIR}/Xtool-${VERSION}${FILE_SUFFIX}-Setup.exe`
                       core.setOutput('DOWNLOAD_URL', url)
                       console.log(`下载链接: ${url}`)
 
