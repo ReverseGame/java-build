@@ -7,6 +7,11 @@ on:
                 description: "构建阶段: beta / product"
                 required: true
                 type: string
+            runner:
+                description: "构建使用的 Runner"
+                required: false
+                type: string
+                default: "windows-latest"
             nodeVersion:
                 description: "Node.js 版本"
                 required: false
@@ -52,7 +57,7 @@ jobs:
     build-electron:
         outputs:
             product-info: ${{ steps.product-info.outputs.result }}
-        runs-on: windows-latest
+        runs-on: ${{ inputs.runner }}
         permissions:
             contents: write
             pull-requests: read
