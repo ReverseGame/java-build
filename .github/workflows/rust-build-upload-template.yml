@@ -80,6 +80,7 @@ jobs:
             - name: Install openssl
               run: sudo apt-get install libssl-dev libsasl2-dev
             - name: Enable cargo net.git-fetch-with-cli
+              if: ${{ secrets.GH_PAT }}
               shell: bash
               run: |
                   mkdir -p "${CARGO_HOME:-$HOME/.cargo}"
@@ -91,6 +92,7 @@ jobs:
                   cat "${CARGO_HOME:-$HOME/.cargo}/config.toml"
 
             - name: Use PAT for private git deps
+              if: ${{ secrets.GH_PAT }}
               shell: bash
               env:
                   GH_PAT: ${{ secrets.GH_PAT }}
