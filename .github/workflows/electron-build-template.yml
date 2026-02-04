@@ -120,61 +120,75 @@ jobs:
             - name: Increment version (版本号递增 - 仅 Production)
               id: version
               if: inputs.buildStage == 'product'
-              shell: bash
-              run: |
-                  CURRENT_VERSION=$(node -p "require('./package.json').version")
-                  VERSION_TYPE="${{ steps.pr_labels.outputs.result }}"
+              uses: actions/github-script@v7
+              env:
+                  VERSION_TYPE: ${{ steps.pr_labels.outputs.result }}
+              with:
+                  script: |
+                      const fs = require('fs')
+                      const { execSync } = require('child_process')
 
-                  # 移除可能的 beta/alpha 后缀
-                  BASE_VERSION=$(echo $CURRENT_VERSION | sed 's/-[a-z]*\.[0-9]*//')
+                      const packageJson = require('./package.json')
+                      const currentVersion = packageJson.version
+                      const versionType = process.env.VERSION_TYPE || 'patch'
 
-                  # 解析版本号
-                  IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+                      // 移除可能的 beta/alpha 后缀
+                      const baseVersion = currentVersion.replace(/-[a-z]*\.[0-9]*/, '')
 
-                  # 根据 PR label 决定递增类型
-                  case "$VERSION_TYPE" in
-                    major)
-                      NEW_VERSION="$((MAJOR + 1)).0.0"
-                      ;;
-                    minor)
-                      NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
-                      ;;
-                    *)
-                      NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-                      ;;
-                  esac
+                      // 解析版本号
+                      const [major, minor, patch] = baseVersion.split('.').map(Number)
 
-                  echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
-                  echo "版本号更新: $CURRENT_VERSION → $NEW_VERSION ($VERSION_TYPE)"
+                      // 根据 PR label 决定递增类型
+                      let newVersion
+                      switch (versionType) {
+                        case 'major':
+                          newVersion = `${major + 1}.0.0`
+                          break
+                        case 'minor':
+                          newVersion = `${major}.${minor + 1}.0`
+                          break
+                        default:
+                          newVersion = `${major}.${minor}.${patch + 1}`
+                      }
 
-                  # 更新 package.json
-                  npm version $NEW_VERSION --no-git-tag-version
+                      core.setOutput('NEW_VERSION', newVersion)
+                      console.log(`版本号更新: ${currentVersion} → ${newVersion} (${versionType})`)
 
-                  # 提交版本更新
-                  git config user.name "github-actions[bot]"
-                  git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git add package.json
-                  git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
-                  git push
+                      // 更新 package.json
+                      execSync(`npm version ${newVersion} --no-git-tag-version`, { stdio: 'inherit' })
+
+                      // 提交版本更新
+                      execSync('git config user.name "github-actions[bot]"', { stdio: 'inherit' })
+                      execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', { stdio: 'inherit' })
+                      execSync('git add package.json', { stdio: 'inherit' })
+                      execSync(`git commit -m "chore: bump version to ${newVersion} [skip ci]"`, { stdio: 'inherit' })
+                      execSync('git push', { stdio: 'inherit' })
 
             - name: Get current version (获取当前版本 - Beta)
               id: version_beta
               if: inputs.buildStage == 'beta'
-              shell: bash
-              run: |
-                  VERSION=$(node -p "require('./package.json').version")
-                  echo "NEW_VERSION=$VERSION" >> $GITHUB_OUTPUT
-                  echo "Beta 使用当前版本: $VERSION"
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const version = require('./package.json').version
+                      core.setOutput('NEW_VERSION', version)
+                      console.log(`Beta 使用当前版本: ${version}`)
 
             - name: Set final version
               id: final_version
-              shell: bash
-              run: |
-                  if [ "${{ inputs.buildStage }}" == "product" ]; then
-                    echo "FINAL_VERSION=${{ steps.version.outputs.NEW_VERSION }}" >> $GITHUB_OUTPUT
-                  else
-                    echo "FINAL_VERSION=${{ steps.version_beta.outputs.NEW_VERSION }}" >> $GITHUB_OUTPUT
-                  fi
+              uses: actions/github-script@v7
+              env:
+                  BUILD_STAGE: ${{ inputs.buildStage }}
+                  VERSION_PRODUCT: ${{ steps.version.outputs.NEW_VERSION }}
+                  VERSION_BETA: ${{ steps.version_beta.outputs.NEW_VERSION }}
+              with:
+                  script: |
+                      const buildStage = process.env.BUILD_STAGE
+                      const finalVersion = buildStage === 'product'
+                        ? process.env.VERSION_PRODUCT
+                        : process.env.VERSION_BETA
+                      core.setOutput('FINAL_VERSION', finalVersion)
+                      console.log(`最终版本: ${finalVersion}`)
 
             - uses: actions/github-script@v7
               id: message-content
@@ -216,9 +230,14 @@ jobs:
                   version: ${{ inputs.pnpmVersion }}
 
             - name: Get pnpm store directory
-              shell: bash
-              run: |
-                  echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+              id: pnpm-store
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const { execSync } = require('child_process')
+                      const storePath = execSync('pnpm store path --silent', { encoding: 'utf-8' }).trim()
+                      core.exportVariable('STORE_PATH', storePath)
+                      console.log(`pnpm store path: ${storePath}`)
 
             - name: Setup pnpm cache
               uses: actions/cache@v4
@@ -279,24 +298,33 @@ jobs:
 
             - name: Get version from previous job
               id: get_version
-              shell: bash
-              run: |
-                  VERSION=$(node -p "require('./package.json').version")
-                  echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const version = require('./package.json').version
+                      core.setOutput('VERSION', version)
+                      console.log(`版本: ${version}`)
 
             - name: Determine S3 directory
               id: s3_dir
-              shell: bash
-              run: |
-                  if [ "${{ inputs.buildStage }}" == "product" ]; then
-                    echo "S3_DIR=releases" >> $GITHUB_OUTPUT
-                    echo "YML_FILE=latest.yml" >> $GITHUB_OUTPUT
-                  else
-                    # Beta 使用随机路径防止公网暴露
-                    RANDOM_PATH=$(echo "${{ github.sha }}" | cut -c1-8)
-                    echo "S3_DIR=releases-beta/${RANDOM_PATH}" >> $GITHUB_OUTPUT
-                    echo "YML_FILE=beta.yml" >> $GITHUB_OUTPUT
-                  fi
+              uses: actions/github-script@v7
+              env:
+                  BUILD_STAGE: ${{ inputs.buildStage }}
+                  COMMIT_SHA: ${{ github.sha }}
+              with:
+                  script: |
+                      const buildStage = process.env.BUILD_STAGE
+                      const commitSha = process.env.COMMIT_SHA
+
+                      if (buildStage === 'product') {
+                        core.setOutput('S3_DIR', 'releases')
+                        core.setOutput('YML_FILE', 'latest.yml')
+                      } else {
+                        // Beta 使用随机路径防止公网暴露
+                        const randomPath = commitSha.substring(0, 8)
+                        core.setOutput('S3_DIR', `releases-beta/${randomPath}`)
+                        core.setOutput('YML_FILE', 'beta.yml')
+                      }
 
             - name: Download artifacts (下载构建产物)
               uses: actions/download-artifact@v4
@@ -367,10 +395,18 @@ jobs:
 
             - name: Generate download URL
               id: download_url
-              shell: bash
-              run: |
-                  URL="https://${{ inputs.bucket }}.s3.amazonaws.com/${{ inputs.awsPath }}/${{ steps.s3_dir.outputs.S3_DIR }}/Xtool-${{ steps.get_version.outputs.VERSION }}-Setup.exe"
-                  echo "DOWNLOAD_URL=$URL" >> $GITHUB_OUTPUT
+              uses: actions/github-script@v7
+              env:
+                  BUCKET: ${{ inputs.bucket }}
+                  AWS_PATH: ${{ inputs.awsPath }}
+                  S3_DIR: ${{ steps.s3_dir.outputs.S3_DIR }}
+                  VERSION: ${{ steps.get_version.outputs.VERSION }}
+              with:
+                  script: |
+                      const { BUCKET, AWS_PATH, S3_DIR, VERSION } = process.env
+                      const url = `https://${BUCKET}.s3.amazonaws.com/${AWS_PATH}/${S3_DIR}/Xtool-${VERSION}-Setup.exe`
+                      core.setOutput('DOWNLOAD_URL', url)
+                      console.log(`下载链接: ${url}`)
 
             - uses: actions/github-script@v7
               id: release-message-content
