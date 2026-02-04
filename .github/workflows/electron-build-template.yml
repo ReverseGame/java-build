@@ -42,6 +42,14 @@ on:
                 description: "发布通知飞书 Webhook"
                 required: false
                 type: string
+            backendServerUrl:
+                description: "后端服务器 URL"
+                required: true
+                type: string
+            bypassApiUrl:
+                description: "Bypass API URL"
+                required: true
+                type: string
         secrets:
             awsAccessKey:
                 description: "AWS Access Key ID"
@@ -252,14 +260,22 @@ jobs:
 
             - name: Build Electron app (构建 Electron 主进程)
               run: pnpm run build:electron
+              env:
+                  BACKEND_SERVER_URL: ${{ inputs.backendServerUrl }}
+                  BYPASS_API_URL: ${{ inputs.bypassApiUrl }}
 
             - name: Build Renderer (构建渲染进程)
               run: pnpm run build:renderer
+              env:
+                  BACKEND_SERVER_URL: ${{ inputs.backendServerUrl }}
+                  BYPASS_API_URL: ${{ inputs.bypassApiUrl }}
 
             - name: Package with electron-builder (打包)
               run: pnpm exec electron-builder --win --x64
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  BACKEND_SERVER_URL: ${{ inputs.backendServerUrl }}
+                  BYPASS_API_URL: ${{ inputs.bypassApiUrl }}
 
             - name: Post Build Result Message (发送构建结果飞书通知)
               uses: Comori/feishu@v0.0.5
