@@ -67,7 +67,7 @@ jobs:
                 key: ${{ secrets.tencentPrivateKey }}
                 port: ${{ inputs.port }}
                 script: |
-                  cd rust-gateway && sh update.sh && sleep 60
+                  cd rust-gateway && sh update.sh && sleep 20
 
             - name: 'create image && sync AS'
               uses: ReverseGame/java-build/.github/actions/tencent-action@main
