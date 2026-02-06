@@ -522,7 +522,7 @@ jobs:
                   draft: false
                   prerelease: false
               env:
-                  GITHUB_TOKEN: ${{ secrets.patToken }}
+                  GITHUB_TOKEN: ${{ github.token }}
 
             - name: Create GitHub Tag (创建 GitHub Tag - 仅 Production)
               if: success() && inputs.buildStage == 'product'
@@ -530,7 +530,7 @@ jobs:
               env:
                   VERSION: ${{ steps.get_version.outputs.VERSION }}
               with:
-                  github-token: ${{ secrets.patToken }}
+                  github-token: ${{ github.token }}
                   script: |
                       const version = process.env.VERSION
                       const tagName = `v${version}`
