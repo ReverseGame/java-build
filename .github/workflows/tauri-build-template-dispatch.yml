@@ -74,16 +74,6 @@ jobs:
           cd $repo_name 
           git rev-parse HEAD
 
-      - name: Setup Node.js  environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.nodeVersion }}
-      - name: Increment version
-        id: version
-        run: |
-          npm install -g pnpm
-          pnpm update-version
-
       - name: Set PR body based on repository
         id: pr_body
         run: |
@@ -101,8 +91,6 @@ jobs:
         id: cpr
         with:
           add-paths: |
-            package.json
-            src-tauri/*
             ${{ steps.update_submodule.outputs.repo_name }}
           commit-message: "[create-pull-request] ${{ github.event.client_payload.message }}"
           title: "[create-pull-request] ${{ github.event.client_payload.message }}"
