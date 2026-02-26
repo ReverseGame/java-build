@@ -118,7 +118,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Enable cargo net.git-fetch-with-cli
-        if: secrets.GH_PAT != ''
         shell: bash
         run: |
           mkdir -p "${CARGO_HOME:-$HOME/.cargo}"
@@ -127,9 +126,9 @@ jobs:
           git-fetch-with-cli = true
           EOF
           echo "Cargo config:"
-          cat "${CARGO_HOME:-$HOME/.cargo}/con
+          cat "${CARGO_HOME:-$HOME/.cargo}/config.toml"
+
       - name: Use PAT for private git deps
-        if: secrets.GH_PAT != ''
         shell: bash
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
