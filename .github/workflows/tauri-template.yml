@@ -195,8 +195,8 @@ jobs:
           overwrite: true
           name: macos-bundle
           path: |
-            ./${{ inputs.projectPath }}/src-tauri/target/release/bundle/macos/*.tar.gz
-            ./${{ inputs.projectPath }}/src-tauri/target/release/bundle/macos/*.tar.gz.sig
+            ./${{ inputs.projectPath }}/target/release/bundle/macos/*.tar.gz
+            ./${{ inputs.projectPath }}/target/release/bundle/macos/*.tar.gz.sig
 
       - name: Upload Artifact (上传构建产物)
         uses: actions/upload-artifact@v4
@@ -206,8 +206,8 @@ jobs:
           overwrite: true
           name: windows-bundle
           path: |
-            ./${{ inputs.projectPath }}/src-tauri/target/release/bundle/msi/*.msi.zip
-            ./${{ inputs.projectPath }}/src-tauri/target/release/bundle/msi/*.msi.zip.sig
+            ./${{ inputs.projectPath }}/target/release/bundle/msi/*.msi.zip
+            ./${{ inputs.projectPath }}/target/release/bundle/msi/*.msi.zip.sig
 
       - name: Post Message (发送飞书 Webhook 消息)
         uses: Comori/feishu@v0.0.5
