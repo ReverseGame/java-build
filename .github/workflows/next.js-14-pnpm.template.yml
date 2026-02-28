@@ -91,6 +91,7 @@ jobs:
           envkey_NEXT_PUBLIC_AW: ${{ vars.NEXT_PUBLIC_AW }}
           envkey_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           envkey_NEXT_PUBLIC_QUORA_PIXEL_ID: ${{ vars.NEXT_PUBLIC_QUORA_PIXEL_ID }}
+          envkey_NEXT_PUBLIC_GOOGLE_ADS_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_ADS_ID }}
           path: .env
 
       - uses: pnpm/action-setup@v4
