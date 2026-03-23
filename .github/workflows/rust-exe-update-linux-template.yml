@@ -104,22 +104,27 @@ jobs:
             - name: list files
               run: ls -R
 
-            - name: Upload artifact product
-              if: inputs.buildStage == 'product'
-              uses: actions/upload-artifact@v4
-              with:
-                  name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-                  path: target/x86_64-pc-windows-gnu/release/${{ inputs.packageName }}.exe
+            - name: 设置上传参数
+              id: upload_params
+              run: |
+                  if [ "${{ inputs.buildStage }}" = "product" ]; then
+                    echo "artifact_name=${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe" >> $GITHUB_OUTPUT
+                  else
+                    echo "artifact_name=${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe" >> $GITHUB_OUTPUT
+                  fi
 
-            - name: Upload artifact
-              if: inputs.buildStage != 'product'
+            - name: Upload artifact (尝试 1/3)
+              id: upload_1
               uses: actions/upload-artifact@v4
+              timeout-minutes: 5
+              continue-on-error: true
               with:
-                  name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
+                  name: ${{ steps.upload_params.outputs.artifact_name }}
                   path: target/x86_64-pc-windows-gnu/release/${{ inputs.packageName }}.exe
+                  overwrite: true
 
-            - name: post success message
-              if: always()
+            - name: Upload artifact 第 1 次失败通知
+              if: steps.upload_1.outcome == 'failure'
               uses: foxundermoon/feishu-action@v2
               with:
                   url: ${{ secrets.webhookFeishu }}
@@ -127,7 +132,7 @@ jobs:
                   content: |
                       post:
                         zh_cn:
-                          title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
+                          title: ⚠️ ${{ inputs.projectName }} Upload artifact 失败 (1/3)，自动重试中...
                           content:
                           - - tag: text
                               un_escape: true
@@ -137,6 +142,109 @@ jobs:
                             - tag: a
                               text: github action
                               href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            - name: Upload artifact (尝试 2/3)
+              if: steps.upload_1.outcome == 'failure'
+              id: upload_2
+              uses: actions/upload-artifact@v4
+              timeout-minutes: 5
+              continue-on-error: true
+              with:
+                  name: ${{ steps.upload_params.outputs.artifact_name }}
+                  path: target/x86_64-pc-windows-gnu/release/${{ inputs.packageName }}.exe
+                  overwrite: true
+
+            - name: Upload artifact 第 2 次失败通知
+              if: steps.upload_2.outcome == 'failure'
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ⚠️ ${{ inputs.projectName }} Upload artifact 失败 (2/3)，自动重试中...
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            - name: Upload artifact (尝试 3/3)
+              if: steps.upload_2.outcome == 'failure'
+              id: upload_3
+              uses: actions/upload-artifact@v4
+              timeout-minutes: 5
+              continue-on-error: true
+              with:
+                  name: ${{ steps.upload_params.outputs.artifact_name }}
+                  path: target/x86_64-pc-windows-gnu/release/${{ inputs.packageName }}.exe
+                  overwrite: true
+
+            - name: Upload artifact 最终检查
+              if: steps.upload_1.outcome == 'failure' && steps.upload_2.outcome == 'failure' && steps.upload_3.outcome == 'failure'
+              run: |
+                  echo "Upload artifact 连续 3 次失败"
+                  exit 1
+
+            - name: 构建成功通知
+              if: success()
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: post
+                  content: |
+                      post:
+                        zh_cn:
+                          title: ${{ inputs.projectName }} 构建成功 ✅
+                          content:
+                          - - tag: text
+                              un_escape: true
+                              text: '部署环境: ${{ inputs.buildStage }}'
+                          - - tag: text
+                              text: '部署链接: '
+                            - tag: a
+                              text: github action
+                              href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            - name: 构建失败通知
+              if: failure()
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: interactive
+                  content: |
+                      {
+                        "header": {
+                          "title": {"content": "❌ ${{ inputs.projectName }} 构建失败", "tag": "plain_text"},
+                          "template": "red"
+                        },
+                        "elements": [
+                          {
+                            "tag": "div",
+                            "text": {
+                              "content": "**部署环境:** ${{ inputs.buildStage }}\n**触发分支:** ${{ github.ref_name }}\n**提交 SHA:** ${{ github.sha }}",
+                              "tag": "lark_md"
+                            }
+                          },
+                          {
+                            "tag": "action",
+                            "actions": [
+                              {
+                                "tag": "button",
+                                "text": {"content": "📋 查看详情", "tag": "plain_text"},
+                                "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                                "type": "default"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+
             - id: output
               uses: ASzc/change-string-case-action@v5
               with:
@@ -230,8 +338,8 @@ jobs:
                   customHeaders: '{"Content-Type": "application/json"}'
                   data: '{"link": "https://${{ inputs.bucket }}.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
 
-            - name: post success message
-              if: inputs.buildStage != 'product'
+            - name: 发布成功通知
+              if: success() && inputs.buildStage != 'product'
               uses: foxundermoon/feishu-action@v2
               with:
                   url: ${{ secrets.webhookFeishu }}
@@ -239,7 +347,7 @@ jobs:
                   content: |
                       post:
                         zh_cn:
-                          title: ${{ inputs.projectName }} 上传结果 ${{ job.status }}!
+                          title: ${{ inputs.projectName }} 发布成功 ✅
                           content:
                           - - tag: text
                               un_escape: true
@@ -254,8 +362,8 @@ jobs:
                             - tag: text
                               text: https://${{ inputs.bucket }}.s3.amazonaws.com/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.sha }}.exe
 
-            - name: post success message
-              if: inputs.buildStage == 'product'
+            - name: 发布成功通知 (product)
+              if: success() && inputs.buildStage == 'product'
               uses: foxundermoon/feishu-action@v2
               with:
                   url: ${{ secrets.webhookFeishu }}
@@ -263,7 +371,7 @@ jobs:
                   content: |
                       post:
                         zh_cn:
-                          title: ${{ inputs.projectName }} 上传结果 ${{ job.status }}!
+                          title: ${{ inputs.projectName }} 发布成功 ✅
                           content:
                           - - tag: text
                               un_escape: true
@@ -277,3 +385,37 @@ jobs:
                               text: '下载链接: '
                             - tag: text
                               text: https://${{ inputs.bucket }}.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+
+            - name: 发布失败通知
+              if: failure()
+              uses: foxundermoon/feishu-action@v2
+              with:
+                  url: ${{ secrets.webhookFeishu }}
+                  msg_type: interactive
+                  content: |
+                      {
+                        "header": {
+                          "title": {"content": "❌ ${{ inputs.projectName }} 发布失败", "tag": "plain_text"},
+                          "template": "red"
+                        },
+                        "elements": [
+                          {
+                            "tag": "div",
+                            "text": {
+                              "content": "**部署环境:** ${{ inputs.buildStage }}\n**触发分支:** ${{ github.ref_name }}\n**提交 SHA:** ${{ github.sha }}",
+                              "tag": "lark_md"
+                            }
+                          },
+                          {
+                            "tag": "action",
+                            "actions": [
+                              {
+                                "tag": "button",
+                                "text": {"content": "📋 查看详情", "tag": "plain_text"},
+                                "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                                "type": "default"
+                              }
+                            ]
+                          }
+                        ]
+                      }
