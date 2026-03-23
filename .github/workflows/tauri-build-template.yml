@@ -208,17 +208,47 @@ jobs:
                       -f ${{ inputs.buildStage }}
                       --config ${{ steps.tauri-config.outputs.result }}
 
-            - name: Upload Artifact (上传构建产物)
-              uses: actions/upload-artifact@v4
+            - name: Upload Artifact (上传构建产物，自动重试)
               if: success() && matrix.os == 'windows'
-              continue-on-error: true
+              uses: actions/github-script@v7
+              env:
+                  ARTIFACT_NAME: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
+                  BUNDLE_DIR: ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi
+                  PRODUCT_NAME: ${{ fromJson(steps.product-info.outputs.result).productName }}
+                  VERSION: ${{ fromJson(steps.product-info.outputs.result).version }}
               with:
-                  if-no-files-found: error
-                  overwrite: true
-                  name: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
-                  path: |
-                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
-                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
+                  script: |
+                      const path = require('path')
+                      const { execSync } = require('child_process')
+
+                      execSync('npm install @actions/artifact@2', { stdio: 'inherit' })
+                      const { DefaultArtifactClient } = require('@actions/artifact')
+
+                      const { BUNDLE_DIR, PRODUCT_NAME, VERSION, ARTIFACT_NAME } = process.env
+                      const files = [
+                        path.join(BUNDLE_DIR, `${PRODUCT_NAME}_${VERSION}_x64_en-US.msi.zip`),
+                        path.join(BUNDLE_DIR, `${PRODUCT_NAME}_${VERSION}_x64_en-US.msi.zip.sig`)
+                      ]
+
+                      const client = new DefaultArtifactClient()
+                      const maxAttempts = 3
+
+                      for (let i = 1; i <= maxAttempts; i++) {
+                        try {
+                          core.info(`上传尝试 ${i}/${maxAttempts}...`)
+                          await client.uploadArtifact(ARTIFACT_NAME, files, BUNDLE_DIR, { retentionDays: 3 })
+                          core.info('✅ 上传成功')
+                          return
+                        } catch (err) {
+                          core.warning(`第 ${i} 次上传失败: ${err.message}`)
+                          if (i < maxAttempts) {
+                            const wait = i * 15
+                            core.info(`⏳ ${wait}s 后重试...`)
+                            await new Promise(r => setTimeout(r, wait * 1000))
+                          }
+                        }
+                      }
+                      core.setFailed(`上传 Artifact 失败，已重试 ${maxAttempts} 次`)
 
             - name: Post Message (发送飞书 Webhook 消息)
               uses: Comori/feishu@v0.0.5
@@ -251,6 +281,22 @@ jobs:
               with:
                   merge-multiple: true
                   path: ./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}
+
+            - name: 校验构建产物
+              run: |
+                RELEASE_DIR="./releases/${{ fromJson(needs.build-tauri.outputs.product-info).linuxFileAppName }}"
+                if [ ! -d "$RELEASE_DIR" ]; then
+                  echo "::error::构建产物目录不存在: $RELEASE_DIR"
+                  echo "Artifact 可能上传失败，请检查 build-tauri job 的上传步骤"
+                  exit 1
+                fi
+                FILE_COUNT=$(ls -1 "$RELEASE_DIR" | wc -l)
+                if [ "$FILE_COUNT" -eq 0 ]; then
+                  echo "::error::构建产物目录为空: $RELEASE_DIR"
+                  exit 1
+                fi
+                echo "找到 $FILE_COUNT 个构建产物:"
+                ls -la "$RELEASE_DIR"
 
             - name: Generate Path
               id: random-path
