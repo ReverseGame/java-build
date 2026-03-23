@@ -208,47 +208,42 @@ jobs:
                       -f ${{ inputs.buildStage }}
                       --config ${{ steps.tauri-config.outputs.result }}
 
-            - name: Upload Artifact (上传构建产物，自动重试)
+            - name: Upload Artifact (上传构建产物)
+              id: upload-1
               if: success() && matrix.os == 'windows'
-              uses: actions/github-script@v7
-              env:
-                  ARTIFACT_NAME: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
-                  BUNDLE_DIR: ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi
-                  PRODUCT_NAME: ${{ fromJson(steps.product-info.outputs.result).productName }}
-                  VERSION: ${{ fromJson(steps.product-info.outputs.result).version }}
+              uses: actions/upload-artifact@v4
+              continue-on-error: true
               with:
-                  script: |
-                      const path = require('path')
-                      const { execSync } = require('child_process')
+                  if-no-files-found: error
+                  overwrite: true
+                  name: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
+                  path: |
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
 
-                      execSync('npm install @actions/artifact@2', { stdio: 'inherit' })
-                      const { DefaultArtifactClient } = require('@actions/artifact')
+            - name: Upload Artifact (重试)
+              id: upload-2
+              if: steps.upload-1.outcome == 'failure'
+              uses: actions/upload-artifact@v4
+              continue-on-error: true
+              with:
+                  if-no-files-found: error
+                  overwrite: true
+                  name: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
+                  path: |
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
 
-                      const { BUNDLE_DIR, PRODUCT_NAME, VERSION, ARTIFACT_NAME } = process.env
-                      const files = [
-                        path.join(BUNDLE_DIR, `${PRODUCT_NAME}_${VERSION}_x64_en-US.msi.zip`),
-                        path.join(BUNDLE_DIR, `${PRODUCT_NAME}_${VERSION}_x64_en-US.msi.zip.sig`)
-                      ]
-
-                      const client = new DefaultArtifactClient()
-                      const maxAttempts = 3
-
-                      for (let i = 1; i <= maxAttempts; i++) {
-                        try {
-                          core.info(`上传尝试 ${i}/${maxAttempts}...`)
-                          await client.uploadArtifact(ARTIFACT_NAME, files, BUNDLE_DIR, { retentionDays: 3 })
-                          core.info('✅ 上传成功')
-                          return
-                        } catch (err) {
-                          core.warning(`第 ${i} 次上传失败: ${err.message}`)
-                          if (i < maxAttempts) {
-                            const wait = i * 15
-                            core.info(`⏳ ${wait}s 后重试...`)
-                            await new Promise(r => setTimeout(r, wait * 1000))
-                          }
-                        }
-                      }
-                      core.setFailed(`上传 Artifact 失败，已重试 ${maxAttempts} 次`)
+            - name: Upload Artifact (最终重试)
+              if: steps.upload-2.outcome == 'failure'
+              uses: actions/upload-artifact@v4
+              with:
+                  if-no-files-found: error
+                  overwrite: true
+                  name: windows-bundle-${{ fromJson(steps.product-info.outputs.result).version }}
+                  path: |
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip
+                      ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
 
             - name: Post Message (发送飞书 Webhook 消息)
               uses: Comori/feishu@v0.0.5
