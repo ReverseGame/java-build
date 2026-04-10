@@ -210,7 +210,7 @@ jobs:
 
             - name: Upload Artifact (上传构建产物)
               id: upload-1
-              if: success() && matrix.os == 'windows'
+              if: steps.build.outcome == 'success' && matrix.os == 'windows'
               uses: actions/upload-artifact@v4
               continue-on-error: true
               with:
@@ -223,7 +223,7 @@ jobs:
 
             - name: Upload Artifact (重试)
               id: upload-2
-              if: steps.upload-1.outcome == 'failure'
+              if: steps.build.outcome == 'success' && steps.upload-1.outcome == 'failure'
               uses: actions/upload-artifact@v4
               continue-on-error: true
               with:
@@ -235,7 +235,7 @@ jobs:
                       ${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}/release/bundle/msi/${{ fromJson(steps.product-info.outputs.result).productName }}_${{ fromJson(steps.product-info.outputs.result).version }}_x64_en-US.msi.zip.sig
 
             - name: Upload Artifact (最终重试)
-              if: steps.upload-2.outcome == 'failure'
+              if: steps.build.outcome == 'success' && steps.upload-2.outcome == 'failure'
               uses: actions/upload-artifact@v4
               with:
                   if-no-files-found: error
@@ -254,9 +254,15 @@ jobs:
                   cardkit-id: AAq15syMYoq55
                   cardkit-version: 0.0.3
                   content: |
-                      title=${{ fromJson(steps.product-info.outputs.result).productName }} ${{ fromJson(steps.product-info.outputs.result).version }} ${{ matrix.os }} ${{ job.status }}
+                      title=${{ fromJson(steps.product-info.outputs.result).productName }} ${{ fromJson(steps.product-info.outputs.result).version }} ${{ matrix.os }} ${{ steps.build.outcome == 'success' && '构建成功' || '构建失败' }}
                       sub_title=构建版本: ${{ inputs.releaseType }} - ${{ inputs.buildStage }}
                       content=${{ steps.message-content.outputs.result }}
+
+            - name: 构建失败时终止流程
+              if: steps.build.outcome != 'success'
+              run: |
+                echo "::error::Tauri 构建失败，终止流程"
+                exit 1
 
     publish:
         permissions:
@@ -512,6 +518,19 @@ jobs:
                   content: |
                       title=${{ fromJson(needs.build-tauri.outputs.product-info).productName }} ${{ fromJson(needs.build-tauri.outputs.product-info).version }} 发布成功
                       content=${{ steps.message-content.outputs.result }}
+
+            - name: Post Message (发布失败通知)
+              uses: Comori/feishu@v0.0.5
+              if: failure() && (inputs.buildFeishuWebhook || inputs.releaseFeishuWebhook)
+              with:
+                  webhook-url: ${{ inputs.buildFeishuWebhook || inputs.releaseFeishuWebhook }}
+                  msg-type: cardkit
+                  cardkit-id: AAq15syMYoq55
+                  cardkit-version: 0.0.3
+                  content: |
+                      title=${{ fromJson(needs.build-tauri.outputs.product-info).productName }} ${{ fromJson(needs.build-tauri.outputs.product-info).version }} 发布失败
+                      sub_title=构建版本: ${{ inputs.releaseType }} - ${{ inputs.buildStage }}
+                      content=**发布流程出错**\n[点击查看 Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
             - name: Create GitHub Tag (创建 GitHub Tag)
               if: success()
