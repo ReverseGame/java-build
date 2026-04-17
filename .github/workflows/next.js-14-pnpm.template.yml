@@ -93,6 +93,7 @@ jobs:
           envkey_NEXT_PUBLIC_QUORA_PIXEL_ID: ${{ vars.NEXT_PUBLIC_QUORA_PIXEL_ID }}
           envkey_NEXT_PUBLIC_GOOGLE_ADS_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_ADS_ID }}
           envkey_NEXT_PUBLIC_RELAY_URL: ${{ vars.NEXT_PUBLIC_RELAY_URL }}
+          envkey_NEXT_PUBLIC_REDDIT_PIXEL_ID: ${{ vars.NEXT_PUBLIC_REDDIT_PIXEL_ID }}
           path: .env
 
       - uses: pnpm/action-setup@v4
