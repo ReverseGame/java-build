@@ -24,6 +24,9 @@ on:
             target:
                 required: false
                 type: string
+            ips:
+                required: false
+                type: string
         secrets:
             tencentSecretId:
                 required: true
@@ -46,6 +49,7 @@ jobs:
                 secret_key: ${{ secrets.tencentSecretKey }}
                 region: ${{ inputs.region }}
                 instance_name_prefix: ${{ inputs.instanceNamePrefix }}
+                ips: ${{ inputs.ips }}
             - name: echo
               run: |
                 echo ${{ steps.get_ips.outputs.ips }}
@@ -70,6 +74,7 @@ jobs:
                   cd rust-gateway && sh update.sh && sleep 20
 
             - name: 'create image && sync AS'
+              if: inputs.ips == ''
               uses: ReverseGame/java-build/.github/actions/tencent-action@main
               with:
                 action: 'create_image_sync_as'
