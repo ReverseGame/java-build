@@ -78,7 +78,7 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Write env file
         uses: SpicyPizza/create-envfile@v2.0
         with:
@@ -98,7 +98,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 9
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -188,7 +188,7 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: deploy to fellas cluster
         uses: znl1087/kubectl@master
         with:
@@ -247,7 +247,7 @@ jobs:
                   - tag: a
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: deploy to fellas cluster
         uses: steebchen/kubectl@v2.0.0
         with:
@@ -315,7 +315,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.awsSecretKey }}
           aws-region: ${{ env.aws_region }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: create
         uses: ianbelcher/eks-kubectl-action@master
         with:
