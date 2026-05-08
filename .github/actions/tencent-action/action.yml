@@ -27,6 +27,9 @@ inputs:
   launch_configuration_id:
     required: false
     description: tencent cloud AS launch_configuration_id
+  ips:
+    required: false
+    description: 'when provided, get_ips returns this value directly'
 
 # Define your outputs here.
 outputs:

@@ -11,12 +11,18 @@ async function run() {
         )
         core.setOutput('image_id', image_id)
     } else if (action === 'get_ips') {
-        let ips = await tencent_cloud.get_ips(
-            core.getInput('secret_id'),
-            core.getInput('secret_key'),
-            core.getInput('region'),
-            core.getInput('instance_name_prefix')
-        )
+        let input_ips = core.getInput('ips')
+        let ips
+        if (input_ips) {
+            ips = input_ips
+        } else {
+            ips = await tencent_cloud.get_ips(
+                core.getInput('secret_id'),
+                core.getInput('secret_key'),
+                core.getInput('region'),
+                core.getInput('instance_name_prefix')
+            )
+        }
         core.setOutput('ips', ips)
     } else if (action === 'create_image_sync_as') {
         let image_id = await tencent_cloud.create_image_sync_as(
