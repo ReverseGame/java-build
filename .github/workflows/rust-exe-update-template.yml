@@ -361,7 +361,7 @@ jobs:
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
-          destination: s3://${{ inputs.bucket }}/windows/release/${{ inputs.packageName }}-${{ github.ref_name }}-unpacked.exe
+          destination: s3://${{ inputs.bucket }}/windows/release/unpacked/${{ inputs.packageName }}-${{ github.ref_name }}.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
