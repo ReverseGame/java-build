@@ -19,6 +19,10 @@ on:
       bucket:
         required: true
         type: string
+      usePack:
+        required: false
+        type: string
+        default: 'false'
     secrets:
       webhookFeishu:
         required: true
@@ -81,6 +85,25 @@ jobs:
         if: inputs.buildStage != 'beta' && inputs.buildStage != 'product'
         run: |
           cargo build --release --target-dir ../target/${{ inputs.buildStage }}
+      - name: Pack product release (if enabled)
+        if: inputs.usePack == 'true' && inputs.buildStage == 'product'
+        shell: powershell
+        run: |
+          $packedDir = "..\target\${{ inputs.buildStage }}\release\packed"
+          if (-not (Test-Path $packedDir)) {
+            New-Item -ItemType Directory -Force -Path $packedDir | Out-Null
+          }
+          $input = "..\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe"
+          $output = "$packedDir\${{ inputs.packageName }}.exe"
+          Write-Host "Packing: $input -> $output"
+          .\pack.exe --input $input --output $output
+          if (-not (Test-Path $output)) {
+            Write-Host "::error::Pack failed: output file not produced"
+            exit 1
+          }
+          $sizeOrig = (Get-Item $input).Length
+          $sizePacked = (Get-Item $output).Length
+          Write-Host "Original size: $sizeOrig bytes; Packed size: $sizePacked bytes"
       - name: Get target parent path
         id: target_parent_path
         shell: powershell
@@ -178,6 +201,23 @@ jobs:
           Write-Host "Upload artifact 连续 3 次失败"
           exit 1
 
+      - name: 设置 packed 上传参数
+        id: upload_params_packed
+        if: inputs.usePack == 'true' && inputs.buildStage == 'product'
+        shell: powershell
+        run: |
+          $name = '${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}-packed.exe'
+          echo "artifact_name=$name" >> $env:GITHUB_OUTPUT
+
+      - name: Upload packed artifact
+        if: inputs.usePack == 'true' && inputs.buildStage == 'product'
+        uses: actions/upload-artifact@v4
+        timeout-minutes: 5
+        with:
+          name: ${{ steps.upload_params_packed.outputs.artifact_name }}
+          path: ${{ steps.target_parent_path.outputs.PARENT_PATH }}/target/${{ inputs.buildStage }}/release/packed/${{ inputs.packageName }}.exe
+          overwrite: true
+
       - name: 构建成功通知
         if: success()
         uses: foxundermoon/feishu-action@v2
@@ -274,6 +314,13 @@ jobs:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
           path: ./
 
+      - name: Download packed artifact product
+        if: inputs.buildStage == 'product' && inputs.usePack == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}-packed.exe
+          path: ./packed/
+
       - name: Download artifact
         if: inputs.buildStage != 'product'
         uses: actions/download-artifact@v4
@@ -284,13 +331,37 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
 
-      - name: Upload to S3
-        if: inputs.buildStage == 'product'
+      - name: Upload main to S3 (packed, product)
+        if: inputs.buildStage == 'product' && inputs.usePack == 'true'
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: cp
+          source: ./packed/${{ inputs.packageName }}.exe
+          destination: s3://${{ inputs.bucket }}/windows/release/${{ inputs.packageName }}-${{ github.ref_name }}.exe
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read
+
+      - name: Upload main to S3 (unpacked, product)
+        if: inputs.buildStage == 'product' && inputs.usePack != 'true'
         uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           command: cp
           source: ./${{ inputs.packageName }}.exe
           destination: s3://${{ inputs.bucket }}/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+          aws_access_key_id: ${{ secrets.awsAccessKey }}
+          aws_secret_access_key: ${{ secrets.awsSecretKey }}
+          aws_region: ${{ inputs.awsRegion }}
+          flags: --acl public-read
+
+      - name: Upload backup (unpacked) to S3 (product)
+        if: inputs.buildStage == 'product' && inputs.usePack == 'true'
+        uses: keithweaver/aws-s3-github-action@v1.0.0
+        with:
+          command: cp
+          source: ./${{ inputs.packageName }}.exe
+          destination: s3://${{ inputs.bucket }}/windows/release/${{ inputs.packageName }}-${{ github.ref_name }}-unpacked.exe
           aws_access_key_id: ${{ secrets.awsAccessKey }}
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
