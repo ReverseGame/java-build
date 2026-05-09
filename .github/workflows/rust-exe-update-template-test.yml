@@ -201,92 +201,47 @@ jobs:
           Write-Host "Upload artifact failed 3 times in a row"
           exit 1
 
-      - name: 设置 packed 上传参数
-        id: upload_params_packed
+      - name: Install AWS CLI (if missing)
         if: inputs.usePack == 'true' && inputs.buildStage == 'product'
         shell: powershell
         run: |
-          $name = '${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}-packed.exe'
-          echo "artifact_name=$name" >> $env:GITHUB_OUTPUT
+          if (Get-Command aws -ErrorAction SilentlyContinue) {
+            Write-Host "aws CLI already present"
+          } else {
+            Write-Host "Installing AWS CLI v2..."
+            $msi = "$env:TEMP\AWSCLIV2.msi"
+            Invoke-WebRequest -Uri https://awscli.amazonaws.com/AWSCLIV2.msi -OutFile $msi
+            Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /norestart" -Wait
+            $awsBin = "C:\Program Files\Amazon\AWSCLIV2"
+            "$awsBin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+            $env:Path = "$awsBin;$env:Path"
+          }
+          aws --version
 
-      - name: Upload packed artifact (尝试 1/3)
+      - name: Upload packed to S3 staging (multipart)
         if: inputs.usePack == 'true' && inputs.buildStage == 'product'
-        id: upload_packed_1
-        uses: actions/upload-artifact@v4
-        timeout-minutes: 5
-        continue-on-error: true
-        with:
-          name: ${{ steps.upload_params_packed.outputs.artifact_name }}
-          path: ${{ steps.target_parent_path.outputs.PARENT_PATH }}/target/${{ inputs.buildStage }}/release/packed/${{ inputs.packageName }}.exe
-          overwrite: true
-
-      - name: Upload packed artifact 第 1 次失败通知
-        if: inputs.usePack == 'true' && inputs.buildStage == 'product' && steps.upload_packed_1.outcome == 'failure'
-        uses: foxundermoon/feishu-action@v2
-        with:
-          url: ${{ secrets.webhookFeishu }}
-          msg_type: post
-          content: |
-            post:
-              zh_cn:
-                title: ⚠️ ${{ inputs.projectName }} Upload packed artifact 失败 (1/3)，自动重试中...
-                content:
-                - - tag: text
-                    un_escape: true
-                    text: '部署环境: ${{ inputs.buildStage }}'
-                - - tag: text
-                    text: '部署链接: '
-                  - tag: a
-                    text: github action
-                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Upload packed artifact (尝试 2/3)
-        if: inputs.usePack == 'true' && inputs.buildStage == 'product' && steps.upload_packed_1.outcome == 'failure'
-        id: upload_packed_2
-        uses: actions/upload-artifact@v4
-        timeout-minutes: 5
-        continue-on-error: true
-        with:
-          name: ${{ steps.upload_params_packed.outputs.artifact_name }}
-          path: ${{ steps.target_parent_path.outputs.PARENT_PATH }}/target/${{ inputs.buildStage }}/release/packed/${{ inputs.packageName }}.exe
-          overwrite: true
-
-      - name: Upload packed artifact 第 2 次失败通知
-        if: inputs.usePack == 'true' && inputs.buildStage == 'product' && steps.upload_packed_2.outcome == 'failure'
-        uses: foxundermoon/feishu-action@v2
-        with:
-          url: ${{ secrets.webhookFeishu }}
-          msg_type: post
-          content: |
-            post:
-              zh_cn:
-                title: ⚠️ ${{ inputs.projectName }} Upload packed artifact 失败 (2/3)，自动重试中...
-                content:
-                - - tag: text
-                    un_escape: true
-                    text: '部署环境: ${{ inputs.buildStage }}'
-                - - tag: text
-                    text: '部署链接: '
-                  - tag: a
-                    text: github action
-                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Upload packed artifact (尝试 3/3)
-        if: inputs.usePack == 'true' && inputs.buildStage == 'product' && steps.upload_packed_2.outcome == 'failure'
-        id: upload_packed_3
-        uses: actions/upload-artifact@v4
-        timeout-minutes: 5
-        continue-on-error: true
-        with:
-          name: ${{ steps.upload_params_packed.outputs.artifact_name }}
-          path: ${{ steps.target_parent_path.outputs.PARENT_PATH }}/target/${{ inputs.buildStage }}/release/packed/${{ inputs.packageName }}.exe
-          overwrite: true
-
-      - name: Upload packed artifact 最终检查
-        if: inputs.usePack == 'true' && inputs.buildStage == 'product' && steps.upload_packed_1.outcome == 'failure' && steps.upload_packed_2.outcome == 'failure' && steps.upload_packed_3.outcome == 'failure'
         shell: powershell
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.awsAccessKey }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.awsSecretKey }}
+          AWS_DEFAULT_REGION: ${{ inputs.awsRegion }}
+          AWS_RETRY_MODE: standard
+          AWS_MAX_ATTEMPTS: "10"
         run: |
-          Write-Host "Upload packed artifact failed 3 times in a row"
+          $src = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\packed\${{ inputs.packageName }}.exe"
+          $dst = "s3://${{ inputs.bucket }}/_tmp/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe"
+          aws configure set default.s3.multipart_threshold 8MB
+          aws configure set default.s3.multipart_chunksize 8MB
+          aws configure set default.s3.max_concurrent_requests 8
+          $maxAttempts = 3
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            Write-Host "Upload attempt $i/$maxAttempts: $src -> $dst"
+            aws s3 cp "$src" "$dst" --no-progress --only-show-errors
+            if ($LASTEXITCODE -eq 0) { Write-Host "Upload succeeded on attempt $i"; exit 0 }
+            Write-Host "Attempt $i failed (exit=$LASTEXITCODE)"
+            if ($i -lt $maxAttempts) { Start-Sleep -Seconds (5 * $i) }
+          }
+          Write-Host "::error::Upload packed to S3 staging failed after $maxAttempts attempts"
           exit 1
 
       - name: 构建成功通知
@@ -385,12 +340,17 @@ jobs:
           name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
           path: ./
 
-      - name: Download packed artifact product
+      - name: Download packed from S3 staging
         if: inputs.buildStage == 'product' && inputs.usePack == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}-packed.exe
-          path: ./packed/
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.awsAccessKey }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.awsSecretKey }}
+          AWS_DEFAULT_REGION: ${{ inputs.awsRegion }}
+          AWS_RETRY_MODE: standard
+          AWS_MAX_ATTEMPTS: "10"
+        run: |
+          mkdir -p ./packed
+          aws s3 cp "s3://${{ inputs.bucket }}/_tmp/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe" "./packed/${{ inputs.packageName }}.exe" --no-progress --only-show-errors
 
       - name: Download artifact
         if: inputs.buildStage != 'product'
@@ -449,6 +409,15 @@ jobs:
           aws_secret_access_key: ${{ secrets.awsSecretKey }}
           aws_region: ${{ inputs.awsRegion }}
           flags: --acl public-read
+
+      - name: Cleanup S3 staging
+        if: always() && inputs.buildStage == 'product' && inputs.usePack == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.awsAccessKey }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.awsSecretKey }}
+          AWS_DEFAULT_REGION: ${{ inputs.awsRegion }}
+        run: |
+          aws s3 rm "s3://${{ inputs.bucket }}/_tmp/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe" || true
 
 #      - name: update version
 #        if: inputs.buildStage != 'dev'
