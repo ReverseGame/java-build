@@ -202,62 +202,6 @@ jobs:
       os: ${{ steps.output.outputs.lowercase }}
       version: ${{ steps.version.outputs.version }}
 
-  upload:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
-    needs: build_rust
-
-    steps:
-      - name: post messasge
-        uses: foxundermoon/feishu-action@v2
-        with:
-          url: ${{ secrets.webhookFeishu }}
-          msg_type: post
-          content: |
-            post:
-              zh_cn:
-                title: ${{ inputs.projectName }} 开始上传
-                content:
-                - - tag: text
-                    un_escape: true
-                    text: '部署环境: ${{ inputs.buildStage }}'
-                - - tag: text
-                    text: '部署链接: '
-                  - tag: a
-                    text: github action
-                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Download packed from COS staging
-        if: inputs.buildStage == 'product' && inputs.usePack == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ inputs.tencentRegion }}
-        run: |
-          mkdir -p ./packed
-          aws s3 cp "s3://${{ inputs.bucket }}/_tmp/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe" "./packed/${{ inputs.packageName }}.exe" --endpoint-url "https://cos.${{ inputs.tencentRegion }}.myqcloud.com" --no-progress --only-show-errors
-
-      - name: Download artifact
-        if: inputs.buildStage != 'product'
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
-          path: ./
-
-      - name: Display structure of downloaded files
-        run: ls -R
-
-      - name: Cleanup COS staging
-        if: always() && inputs.buildStage == 'product' && inputs.usePack == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ inputs.tencentRegion }}
-        run: |
-          aws s3 rm "s3://${{ inputs.bucket }}/_tmp/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe" --endpoint-url "https://cos.${{ inputs.tencentRegion }}.myqcloud.com" || true
-
 #      - name: update version
 #        if: inputs.buildStage != 'dev'
 #        uses: fjogeleit/http-request-action@v1
