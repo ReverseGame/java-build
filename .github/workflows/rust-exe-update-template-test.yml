@@ -229,102 +229,130 @@ jobs:
       os: ${{ steps.output.outputs.lowercase }}
       version: ${{ steps.version.outputs.version }}
 
-#      - name: update version
-#        if: inputs.buildStage != 'dev'
-#        uses: fjogeleit/http-request-action@v1
-#        with:
-#          url: ${{ secrets.updateApi }}/version/update
-#          method: "POST"
-#          customHeaders: '{"Content-Type": "application/json"}'
-#          data: '{"platform": "windows", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
+  upload:
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    needs: build_rust
 
-#      - name: update download
-#        if: inputs.buildStage == 'product'
-#        uses: fjogeleit/http-request-action@v1
-#        with:
-#          url: ${{ secrets.updateApi }}/windows/update
-#          method: "POST"
-#          customHeaders: '{"Content-Type": "application/json"}'
-#          data: '{"link": "https://${{ inputs.bucket }}.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
+    steps:
+      - name: post messasge
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始上传
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-#      - name: 发布成功通知
-#        if: success() && inputs.buildStage != 'product'
-#        uses: foxundermoon/feishu-action@v2
-#        with:
-#          url: ${{ secrets.webhookFeishu }}
-#          msg_type: post
-#          content: |
-#            post:
-#              zh_cn:
-#                title: ${{ inputs.projectName }} 发布成功 ✅
-#                content:
-#                - - tag: text
-#                    un_escape: true
-#                    text: '部署环境: ${{ inputs.buildStage }}'
-#                - - tag: text
-#                    text: '部署链接: '
-#                  - tag: a
-#                    text: github action
-#                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-#                - - tag: text
-#                    text: '下载链接: '
-#                  - tag: text
-#                    text: https://${{ inputs.bucket }}.s3.amazonaws.com/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe
-#
-#      - name: 发布成功通知 (product)
-#        if: success() && inputs.buildStage == 'product'
-#        uses: foxundermoon/feishu-action@v2
-#        with:
-#          url: ${{ secrets.webhookFeishu }}
-#          msg_type: post
-#          content: |
-#            post:
-#              zh_cn:
-#                title: ${{ inputs.projectName }} 发布成功 ✅
-#                content:
-#                - - tag: text
-#                    un_escape: true
-#                    text: '部署环境: ${{ inputs.buildStage }}'
-#                - - tag: text
-#                    text: '部署链接: '
-#                  - tag: a
-#                    text: github action
-#                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-#                - - tag: text
-#                    text: '下载链接: '
-#                  - tag: text
-#                    text: https://${{ inputs.bucket }}.s3.amazonaws.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
-#
-#      - name: 发布失败通知
-#        if: failure()
-#        uses: foxundermoon/feishu-action@v2
-#        with:
-#          url: ${{ secrets.webhookFeishu }}
-#          msg_type: interactive
-#          content: |
-#            {
-#              "header": {
-#                "title": {"content": "❌ ${{ inputs.projectName }} 发布失败", "tag": "plain_text"},
-#                "template": "red"
-#              },
-#              "elements": [
-#                {
-#                  "tag": "div",
-#                  "text": {
-#                    "content": "**部署环境:** ${{ inputs.buildStage }}\n**触发分支:** ${{ github.ref_name }}\n**提交 SHA:** ${{ github.sha }}",
-#                    "tag": "lark_md"
-#                  }
-#                },
-#                {
-#                  "tag": "action",
-#                  "actions": [
-#                    {
-#                      "tag": "button",
-#                      "text": {"content": "📋 查看详情", "tag": "plain_text"},
-#                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-#                      "type": "default"
-#                    }
-#                  ]
-#                }
-#              ]
-#            }
+
+      - name: update version
+        if: inputs.buildStage != 'dev'
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: ${{ secrets.updateApi }}/version/update
+          method: "POST"
+          customHeaders: '{"Content-Type": "application/json"}'
+          data: '{"platform": "windows", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
+
+      - name: update download
+        if: inputs.buildStage == 'product'
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: ${{ secrets.updateApi }}/windows/update
+          method: "POST"
+          customHeaders: '{"Content-Type": "application/json"}'
+          data: '{"link": "https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe"}'
+
+      - name: 发布成功通知
+        if: success() && inputs.buildStage != 'product'
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 发布成功 ✅
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '下载链接: '
+                  - tag: text
+                    text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe
+
+      - name: 发布成功通知 (product)
+        if: success() && inputs.buildStage == 'product'
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 发布成功 ✅
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '下载链接: '
+                  - tag: text
+                    text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
+
+      - name: 发布失败通知
+        if: failure()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: interactive
+          content: |
+            {
+              "header": {
+                "title": {"content": "❌ ${{ inputs.projectName }} 发布失败", "tag": "plain_text"},
+                "template": "red"
+              },
+              "elements": [
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**部署环境:** ${{ inputs.buildStage }}\n**触发分支:** ${{ github.ref_name }}\n**提交 SHA:** ${{ github.sha }}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "action",
+                  "actions": [
+                    {
+                      "tag": "button",
+                      "text": {"content": "📋 查看详情", "tag": "plain_text"},
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                      "type": "default"
+                    }
+                  ]
+                }
+              ]
+            }
