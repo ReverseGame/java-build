@@ -136,7 +136,7 @@ jobs:
           $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
           $region = '${{ inputs.tencentRegion }}'
           $bucket = '${{ inputs.bucket }}'
-          $key = '$/windows/${{ inputs.buildStage }}/packed/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe'
+          $key = '$/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe'
           $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\packed\${{ inputs.packageName }}.exe"
           .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -162,7 +162,7 @@ jobs:
           $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
           $region = '${{ inputs.tencentRegion }}'
           $bucket = '${{ inputs.bucket }}'
-          $key = 'windows/release/packed/${{ inputs.packageName }}-${{ github.ref_name }}.exe'
+          $key = 'windows/release/${{ inputs.packageName }}-${{ github.ref_name }}.exe'
           $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\packed\${{ inputs.packageName }}.exe"
           .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }    
