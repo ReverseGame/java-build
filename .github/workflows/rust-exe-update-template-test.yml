@@ -122,7 +122,7 @@ jobs:
           $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
           $region = '${{ inputs.tencentRegion }}'
           $bucket = '${{ inputs.bucket }}'
-          $key = 'release/unpacked/${{ github.run_id }}/${{ inputs.packageName }}.exe'
+          $key = '${{ inputs.buildStage }}/unpacked/${{ github.run_id }}/${{ inputs.packageName }}.exe'
           $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe"
           .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -135,7 +135,7 @@ jobs:
           $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
           $region = '${{ inputs.tencentRegion }}'
           $bucket = '${{ inputs.bucket }}'
-          $key = 'release/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe'
+          $key = '${{ inputs.buildStage }}/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe'
           $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\packed\${{ inputs.packageName }}.exe"
           .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -201,69 +201,6 @@ jobs:
     outputs:
       os: ${{ steps.output.outputs.lowercase }}
       version: ${{ steps.version.outputs.version }}
-
-  upload:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
-    needs: build_rust
-
-    steps:
-      - name: post messasge
-        uses: foxundermoon/feishu-action@v2
-        with:
-          url: ${{ secrets.webhookFeishu }}
-          msg_type: post
-          content: |
-            post:
-              zh_cn:
-                title: ${{ inputs.projectName }} 开始上传
-                content:
-                - - tag: text
-                    un_escape: true
-                    text: '部署环境: ${{ inputs.buildStage }}'
-                - - tag: text
-                    text: '部署链接: '
-                  - tag: a
-                    text: github action
-                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Download artifact product
-        if: inputs.buildStage == 'product'
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-          path: ./
-
-      - name: Download packed from COS staging
-        if: inputs.buildStage == 'product' && inputs.usePack == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ inputs.tencentRegion }}
-        run: |
-          mkdir -p ./packed
-          aws s3 cp "s3://${{ inputs.bucket }}/_tmp/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe" "./packed/${{ inputs.packageName }}.exe" --endpoint-url "https://cos.${{ inputs.tencentRegion }}.myqcloud.com" --no-progress --only-show-errors
-
-      - name: Download artifact
-        if: inputs.buildStage != 'product'
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.sha }}.exe
-          path: ./
-
-      - name: Display structure of downloaded files
-        run: ls -R
-
-      - name: Cleanup COS staging
-        if: always() && inputs.buildStage == 'product' && inputs.usePack == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ inputs.tencentRegion }}
-        run: |
-          aws s3 rm "s3://${{ inputs.bucket }}/_tmp/packed/${{ github.run_id }}/${{ inputs.packageName }}.exe" --endpoint-url "https://cos.${{ inputs.tencentRegion }}.myqcloud.com" || true
 
 #      - name: update version
 #        if: inputs.buildStage != 'dev'
