@@ -225,18 +225,7 @@ jobs:
         uses: ASzc/change-string-case-action@v5
         with:
           string: ${{ runner.os }}
-    outputs:
-      os: ${{ steps.output.outputs.lowercase }}
-      version: ${{ steps.version.outputs.version }}
 
-  upload:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
-    needs: build_rust
-
-    steps:
       - name: post messasge
         uses: foxundermoon/feishu-action@v2
         with:
@@ -356,3 +345,6 @@ jobs:
                 }
               ]
             }
+    outputs:
+      os: ${{ steps.output.outputs.lowercase }}
+      version: ${{ steps.version.outputs.version }}
