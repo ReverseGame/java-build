@@ -229,13 +229,6 @@ jobs:
                     text: github action
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - name: Download artifact product
-        if: inputs.buildStage == 'product'
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.packageName }}-${{ inputs.buildStage }}-${{ github.ref_name }}-${{ github.sha }}.exe
-          path: ./
-
       - name: Download packed from COS staging
         if: inputs.buildStage == 'product' && inputs.usePack == 'true'
         env:
