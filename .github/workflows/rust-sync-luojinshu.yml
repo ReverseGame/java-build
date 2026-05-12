@@ -25,6 +25,18 @@ on:
                 required: false
                 type: string
                 default: 'false'
+            run_copy:
+                required: false
+                type: boolean
+                default: true
+            run_init:
+                required: false
+                type: boolean
+                default: true
+            run_multiple:
+                required: false
+                type: boolean
+                default: true
         secrets:
             tencentPrivateKey:
                 required: true
@@ -38,7 +50,7 @@ jobs:
               run: |
                 echo ${{ inputs.ips }}
             - name: Copy files via SSH
-              if: inputs.source != ''
+              if: inputs.run_copy && inputs.source != ''
               uses: appleboy/scp-action@v1
               with:
                   host: ${{ inputs.ips }}
@@ -48,7 +60,7 @@ jobs:
                   target: ${{ inputs.target }}
 
             - name: init config
-              if: inputs.is_init == 'true'
+              if: inputs.run_init && inputs.is_init == 'true'
               uses: appleboy/ssh-action@v1
               with:
                 host: ${{ inputs.ips }}
@@ -61,6 +73,7 @@ jobs:
               
 
             - name: Multiple hosts
+              if: inputs.run_multiple
               uses: appleboy/ssh-action@v1
               with:
                 host: ${{ inputs.ips }}
@@ -69,4 +82,4 @@ jobs:
                 key: ${{ secrets.tencentPrivateKey }}
                 port: ${{ inputs.port }}
                 script: |
-                  cd rust-gateway && sh update.sh && sleep 20
+                  sudo bash rust-gateway/update.sh && sleep 20
