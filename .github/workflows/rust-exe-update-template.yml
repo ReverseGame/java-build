@@ -310,7 +310,7 @@ jobs:
                 - - tag: text
                     text: '下载链接: '
                   - tag: text
-                    text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/${{ inputs.packageName }}-${{ steps.version.outputs.version}}.exe
+                    text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/${{ inputs.packageName }}-${{ github.ref_name }}.exe
       - name: 发布成功通知 (product)
         if: success() && inputs.buildStage == 'product'
         uses: foxundermoon/feishu-action@v2
