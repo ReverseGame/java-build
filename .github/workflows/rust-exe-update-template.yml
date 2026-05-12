@@ -253,7 +253,7 @@ jobs:
           url: ${{ secrets.updateApi }}/version/update
           method: "POST"
           customHeaders: '{"Content-Type": "application/json"}'
-          data: '{"platform": "windows", "env": "${{ inputs.buildStage }}", "version": "${{ needs.build_rust.outputs.version }}", "hash": "${{ github.sha }}"}'
+          data: '{"platform": "windows", "env": "${{ inputs.buildStage }}", "version": "${{ steps.version.outputs.version }}", "hash": "${{ github.sha }}"}'
 
       - name: update download
         if: inputs.buildStage == 'product'
@@ -333,7 +333,7 @@ jobs:
                 - - tag: text
                     text: '下载链接: '
                   - tag: text
-                    text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/unpakced/${{ inputs.packageName }}-${{  github.ref_name }}.exe      
+                    text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/unpacked-${{ github.sha }}/${{ inputs.packageName }}-${{ github.ref_name }}.exe
 
       - name: 发布失败通知
         if: failure()
