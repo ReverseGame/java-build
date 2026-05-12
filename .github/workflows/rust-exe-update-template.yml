@@ -116,30 +116,17 @@ jobs:
           echo "PARENT_PATH=$parentPath" >> $env:GITHUB_OUTPUT
 
       - name: Upload unpacked via coscli
-        if: inputs.usePack != 'true' && inputs.buildStage != 'product'
+        if: inputs.buildStage != 'product'
         shell: powershell
         run: |
           $secretId = '${{ secrets.TENCENT_SECRET_ID }}'
           $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
           $region = '${{ inputs.tencentRegion }}'
           $bucket = '${{ inputs.bucket }}'
-          $key = 'windows/${{ inputs.buildStage }}/unpacked/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe'
+          $key = 'windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe'
           $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe"
           .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }    
-
-      - name: Upload product unpacked via coscli
-        if: inputs.usePack == 'true' && inputs.buildStage != 'product'
-        shell: powershell
-        run: |
-          $secretId = '${{ secrets.TENCENT_SECRET_ID }}'
-          $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
-          $region = '${{ inputs.tencentRegion }}'
-          $bucket = '${{ inputs.bucket }}'
-          $key = '$/windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe'
-          $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\packed\${{ inputs.packageName }}.exe"
-          .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload Product unpacked via coscli
         if: inputs.buildStage == 'product'
