@@ -370,4 +370,4 @@ jobs:
             }
     outputs:
       os: ${{ steps.output.outputs.lowercase }}
-      version: ${{ steps.version.steps.version.outputs.version}}
+      version: ${{ steps.version.outputs.version}}
