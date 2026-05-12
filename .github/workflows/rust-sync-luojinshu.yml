@@ -1,0 +1,72 @@
+name: Rust CI
+
+on:
+    workflow_call:
+        inputs:
+            region:
+                required: true
+                type: string
+            username:
+                required: true
+                type: string
+            port:
+                required: true
+                type: string
+            source:
+                required: false
+                type: string
+            target:
+                required: false
+                type: string
+            ips:
+                required: false
+                type: string
+            is_init:
+                required: false
+                type: string
+                default: 'false'
+        secrets:
+            tencentPrivateKey:
+                required: true
+
+jobs:
+    build_rust:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@v4
+            - name: echo
+              run: |
+                echo ${{ inputs.ips }}
+            - name: Copy files via SSH
+              if: inputs.source != ''
+              uses: appleboy/scp-action@v1
+              with:
+                  host: ${{ inputs.ips }}
+                  username: ${{ inputs.username }}
+                  key: ${{ secrets.tencentPrivateKey }}
+                  source: ${{ inputs.source }}
+                  target: ${{ inputs.target }}
+
+            - name: init config
+              if: inputs.is_init == 'true'
+              uses: appleboy/ssh-action@v1
+              with:
+                host: ${{ inputs.ips }}
+                sync: true
+                username: ${{ inputs.username }}
+                key: ${{ secrets.tencentPrivateKey }}
+                port: ${{ inputs.port }}
+                script: |
+                  bash rust-gateway/configs/init.sh
+              
+
+            - name: Multiple hosts
+              uses: appleboy/ssh-action@v1
+              with:
+                host: ${{ inputs.ips }}
+                sync: true
+                username: ${{ inputs.username }}
+                key: ${{ secrets.tencentPrivateKey }}
+                port: ${{ inputs.port }}
+                script: |
+                  cd rust-gateway && sh update.sh && sleep 20
