@@ -75,7 +75,7 @@ jobs:
 
       - name: test output
         run: |
-          Write-Host "version = " ${{ steps.version.steps.version.outputs.version}}
+          Write-Host "version = " ${{ steps.version.outputs.version}}
         shell: powershell
       - name: Build Product Release
         if: inputs.buildStage == 'product'
