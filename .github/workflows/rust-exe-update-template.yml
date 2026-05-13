@@ -128,18 +128,18 @@ jobs:
           .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Upload Product unpacked via coscli
-        if: inputs.buildStage == 'product'
-        shell: powershell
-        run: |
-          $secretId = '${{ secrets.TENCENT_SECRET_ID }}'
-          $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
-          $region = '${{ inputs.tencentRegion }}'
-          $bucket = '${{ inputs.bucket }}'
-          $key = 'windows/release/unpacked-${{ github.sha }}/${{ inputs.packageName }}-${{ github.ref_name }}.exe'
-          $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe"
-          .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+#      - name: Upload Product unpacked via coscli
+#        if: inputs.buildStage == 'product'
+#        shell: powershell
+#        run: |
+#          $secretId = '${{ secrets.TENCENT_SECRET_ID }}'
+#          $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
+#          $region = '${{ inputs.tencentRegion }}'
+#          $bucket = '${{ inputs.bucket }}'
+#          $key = 'windows/release/unpacked-${{ github.sha }}/${{ inputs.packageName }}-${{ github.ref_name }}.exe'
+#          $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe"
+#          .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
+#          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload product packed via coscli
         if: inputs.usePack == 'true' && inputs.buildStage == 'product'
@@ -308,29 +308,29 @@ jobs:
                   - tag: text
                     text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/${{ inputs.packageName }}-${{  github.ref_name }}.exe
 
-      - name: 发布成功通知 (product)
-        if: needs.build_rust.result == 'success' && inputs.buildStage == 'product'
-        uses: foxundermoon/feishu-action@v2
-        with:
-          url: ${{ secrets.webhookFeishu }}
-          msg_type: post
-          content: |
-            post:
-              zh_cn:
-                title: ${{ inputs.projectName }} 未加壳版本发布成功 ✅
-                content:
-                - - tag: text
-                    un_escape: true
-                    text: '部署环境: ${{ inputs.buildStage }}'
-                - - tag: text
-                    text: '部署链接: '
-                  - tag: a
-                    text: github action
-                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-                - - tag: text
-                    text: '下载链接: '
-                  - tag: text
-                    text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/unpacked-${{ github.sha }}/${{ inputs.packageName }}-${{ github.ref_name }}.exe
+#      - name: 发布成功通知 (product)
+#        if: needs.build_rust.result == 'success' && inputs.buildStage == 'product'
+#        uses: foxundermoon/feishu-action@v2
+#        with:
+#          url: ${{ secrets.webhookFeishu }}
+#          msg_type: post
+#          content: |
+#            post:
+#              zh_cn:
+#                title: ${{ inputs.projectName }} 未加壳版本发布成功 ✅
+#                content:
+#                - - tag: text
+#                    un_escape: true
+#                    text: '部署环境: ${{ inputs.buildStage }}'
+#                - - tag: text
+#                    text: '部署链接: '
+#                  - tag: a
+#                    text: github action
+#                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+#                - - tag: text
+#                    text: '下载链接: '
+#                  - tag: text
+#                    text: https://${{ inputs.bucket }}.cos.ap-seoul.myqcloud.com/windows/release/unpacked-${{ github.sha }}/${{ inputs.packageName }}-${{ github.ref_name }}.exe
 
       - name: 发布失败通知
         if: failure() || needs.build_rust.result == 'failure'
