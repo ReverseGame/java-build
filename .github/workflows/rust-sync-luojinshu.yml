@@ -65,7 +65,7 @@ jobs:
                 key: ${{ secrets.tencentPrivateKey }}
                 port: ${{ inputs.port }}
                 script: |
-                  REGION=${{inputs.region}} bash rust-gateway/configs/init.sh
+                  REGION=${{inputs.region}} sudo -E bash rust-gateway/configs/init.sh
               
 
             - name: Multiple hosts
