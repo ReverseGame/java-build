@@ -36,6 +36,11 @@ on:
             awsPath:
                 required: true
                 type: string
+            enablePack:
+                required: false
+                type: boolean
+                default: false
+                description: "是否在 Tauri bundling 前调用调用方仓库内的 scripts/pre-bundle.js 给主 exe 套壳（仅当调用方搭了该钩子时生效）"
         secrets:
             awsAccessKey:
                 required: true
@@ -203,6 +208,9 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ vars.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
                   RUSTFLAGS: '--cfg env="${{ inputs.releaseType }}"'
                   CARGO_TARGET_DIR: "${{ steps.target-cache-dir.outputs.result }}/gui/${{ inputs.releaseType }}"
+                  # 调用方 enablePack=true 时给 pre-bundle.js 钩子打开套壳开关；
+                  # 否则保持空，钩子检测到 PACK_ENABLED!="1" 走 no-op 分支。
+                  PACK_ENABLED: ${{ inputs.enablePack && '1' || '' }}
               with:
                   args: |
                       -f ${{ inputs.buildStage }}
