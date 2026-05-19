@@ -18,18 +18,10 @@ on:
             target:
                 required: false
                 type: string
-            run_copy:
-                required: false
-                type: boolean
-                default: true
-            run_init:
-                required: false
-                type: boolean
-                default: false
-            run_multiple:
-                required: false
-                type: boolean
-                default: true
+            ips:
+              required: true
+              type: string
+              default: ''
         secrets:
             tencentPrivateKey:
                 required: true
@@ -44,6 +36,7 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - name: 'get ips'
+              if: inputs.ips == ''
               uses: ReverseGame/java-build/.github/actions/cf-ips@main
               id: get_ips
               with:
@@ -52,22 +45,21 @@ jobs:
                 region: ${{ inputs.region }}
             - name: echo
               run: |
-                echo ${{ steps.get_ips.outputs.ips }}
+                echo ${{ inputs.ips != '' && inputs.ips || steps.get_ips.outputs.ips }}
             - name: Copy files via SSH
-              if: inputs.run_copy && inputs.source != ''
+              if: inputs.source != ''
               uses: appleboy/scp-action@v1
               with:
-                  host: ${{ steps.get_ips.outputs.ips }}
+                  host: ${{ inputs.ips != '' && inputs.ips || steps.get_ips.outputs.ips }}
                   username: ${{ inputs.username }}
                   key: ${{ secrets.tencentPrivateKey }}
                   source: ${{ inputs.source }}
                   target: ${{ inputs.target }}
 
             - name: init config
-              if: inputs.run_init
               uses: appleboy/ssh-action@v1
               with:
-                host: ${{ steps.get_ips.outputs.ips }}
+                host: ${{ inputs.ips != '' && inputs.ips || steps.get_ips.outputs.ips }}
                 sync: true
                 username: ${{ inputs.username }}
                 key: ${{ secrets.tencentPrivateKey }}
@@ -77,10 +69,9 @@ jobs:
 
 
             - name: Multiple hosts
-              if: inputs.run_multiple
               uses: appleboy/ssh-action@v1
               with:
-                host: ${{ steps.get_ips.outputs.ips }}
+                host: ${{ inputs.ips != '' && inputs.ips || steps.get_ips.outputs.ips }}
                 sync: true
                 username: ${{ inputs.username }}
                 key: ${{ secrets.tencentPrivateKey }}
