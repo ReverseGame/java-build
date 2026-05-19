@@ -1,0 +1,29 @@
+name: 'cf-ips'
+description: 'cloudflare load balancer pool ips action'
+author: 'ptechen'
+
+branding:
+  icon: cloud
+  color: orange
+
+inputs:
+  account_id:
+    required: true
+    description: cloudflare account id
+  api_token:
+    required: true
+    description: cloudflare api token
+  region:
+    required: true
+    description: cloudflare load balancer pool name to filter origins by (the pool whose name matches this value)
+  ips:
+    required: false
+    description: 'when provided, returns this value directly instead of querying cloudflare'
+
+outputs:
+  ips:
+    description: pool ips
+
+runs:
+  using: node24
+  main: index.js

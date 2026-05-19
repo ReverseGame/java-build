@@ -1,0 +1,14 @@
+{
+  "name": "@reverse_game/cf_ips",
+  "collaborators": [
+    "taochen <15736755067@163.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "cf_ips_bg.wasm",
+    "cf_ips.js",
+    "cf_ips.d.ts"
+  ],
+  "main": "cf_ips.js",
+  "types": "cf_ips.d.ts"
+}
