@@ -26,9 +26,9 @@ on:
             tencentPrivateKey:
                 required: true
             cfAccountId:
-                required: true
+                required: false
             cfApiToken:
-                required: true
+                required: false
 
 jobs:
     build_rust:
