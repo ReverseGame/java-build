@@ -6,6 +6,9 @@ on:
             region:
                 required: true
                 type: string
+            pool_name:
+                required: true
+                type: string
             username:
                 required: true
                 type: string
@@ -42,7 +45,7 @@ jobs:
               with:
                 account_id: ${{ secrets.cfAccountId }}
                 api_token: ${{ secrets.cfApiToken }}
-                region: ${{ inputs.region }}
+                region: ${{ inputs.pool_name }}
             - name: echo
               run: |
                 echo ${{ inputs.ips != '' && inputs.ips || steps.get_ips.outputs.ips }}
