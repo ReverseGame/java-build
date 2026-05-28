@@ -123,9 +123,11 @@ jobs:
           $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
           $region = '${{ inputs.tencentRegion }}'
           $bucket = '${{ inputs.bucket }}'
+          $endpoint = "cos.$region.myqcloud.com"
           $key = 'windows/${{ inputs.buildStage }}/${{ inputs.packageName }}-${{ github.ref_name }}-${{ github.sha }}.exe'
           $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\${{ inputs.packageName }}.exe"
-          .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
+          # 官方 coscli 并发分片上传(替代原串行上传,大文件大幅提速)
+          .\coscli-official.exe cp $local "cos://$bucket/$key" -e $endpoint -i $secretId -k $secretKey --thread-num 16 --part-size 16 --err-retry-num ${{ inputs.retries }} --init-skip
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 #      - name: Upload Product unpacked via coscli
@@ -149,9 +151,11 @@ jobs:
           $secretKey = '${{ secrets.TENCENT_SECRET_KEY }}'
           $region = '${{ inputs.tencentRegion }}'
           $bucket = '${{ inputs.bucket }}'
+          $endpoint = "cos.$region.myqcloud.com"
           $key = 'windows/release/${{ inputs.packageName }}-${{ github.ref_name }}.exe'
           $local = "${{ steps.target_parent_path.outputs.PARENT_PATH }}\target\${{ inputs.buildStage }}\release\packed\${{ inputs.packageName }}.exe"
-          .\coscli.exe --secret-id $secretId --secret-key $secretKey --region $region --bucket $bucket --key $key --local $local --retries ${{ inputs.retries }}
+          # 官方 coscli 并发分片上传(替代原串行上传,大文件大幅提速)
+          .\coscli-official.exe cp $local "cos://$bucket/$key" -e $endpoint -i $secretId -k $secretKey --thread-num 16 --part-size 16 --err-retry-num ${{ inputs.retries }} --init-skip
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - id: output
