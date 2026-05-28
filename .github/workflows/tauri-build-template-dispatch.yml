@@ -122,16 +122,8 @@ jobs:
 
       - name: Set PR body based on repository
         id: pr_body
-        env:
-          PR_BODY_MAP: ${{ vars.PR_BODY_MAP }}
         run: |
-          repo_name="${{ steps.update_submodule.outputs.repo_name }}"
-          if [ -n "$PR_BODY_MAP" ]; then
-            body=$(printf '%s' "$PR_BODY_MAP" | jq -r --arg name "$repo_name" '.[$name] // "优化已知问题"')
-          else
-            body="优化已知问题"
-          fi
-          echo "body=$body" >> "$GITHUB_OUTPUT"
+          echo "body=优化已知问题" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
