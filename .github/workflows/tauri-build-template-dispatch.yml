@@ -35,7 +35,7 @@ on:
         required: false
         type: string
         default: ""
-        description: "App token 需要访问的 repo 列表（逗号或换行分隔，例: reverse-bot-gui,reverse-bot-rs）。省略则仅当前 repo。"
+        description: "App token 需要访问的 repo 列表（逗号或换行分隔， 省略则仅当前 repo）。"
       tokenOwner:
         required: false
         type: string
@@ -112,26 +112,18 @@ jobs:
           echo "master SHA: $(git rev-parse HEAD)"
           repository="${{ github.event.client_payload.repository }}"
           echo "Updating repository: $repository"
-          # 从完整仓库路径提取仓库名 (如: ReverseGame/reverse-proxy-test -> reverse-proxy-test)
           repo_name=$(basename $repository)
           echo "Local submodule path: $repo_name"
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
           git -C $repo_name fetch origin ${{ github.event.client_payload.sha }}
           git -C $repo_name checkout ${{ github.event.client_payload.sha }} --force
-          cd $repo_name 
+          cd $repo_name
           git rev-parse HEAD
 
       - name: Set PR body based on repository
         id: pr_body
         run: |
-          repo_name="${{ steps.update_submodule.outputs.repo_name }}"
-          if [ "$repo_name" == "reverse-bot-rs" ]; then
-            echo "body=xbot 内核更新" >> $GITHUB_OUTPUT
-          elif [ "$repo_name" == "reverse-proxy-test" ]; then
-            echo "body=代理测试模块更新" >> $GITHUB_OUTPUT
-          else
-            echo "body=优化已知问题" >> $GITHUB_OUTPUT
-          fi
+          echo "body=优化已知问题" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
