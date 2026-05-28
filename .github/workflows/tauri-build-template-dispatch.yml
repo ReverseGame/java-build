@@ -60,10 +60,25 @@ jobs:
       - name: Generate GitHub App Token (可选)
         if: ${{ inputs.useAppToken }}
         id: app-token
+        continue-on-error: true
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.appId }}
           private-key: ${{ secrets.appPrivateKey }}
+
+      - name: Resolve token source (日志)
+        run: |
+          if [ -n "${{ steps.app-token.outputs.token }}" ]; then
+            echo "::notice::使用 GitHub App token (App ID=${{ secrets.appId }})"
+          elif [ "${{ inputs.useAppToken }}" = "true" ]; then
+            echo "::warning::App token 获取失败，自动回退到 patToken"
+          else
+            echo "::notice::使用 patToken (未启用 useAppToken)"
+          fi
+          if [ -z "${{ steps.app-token.outputs.token }}" ] && [ -z "${{ secrets.patToken }}" ]; then
+            echo "::error::App token 和 patToken 都为空，无法继续"
+            exit 1
+          fi
 
       - name: Echo client_payload
         run: |
