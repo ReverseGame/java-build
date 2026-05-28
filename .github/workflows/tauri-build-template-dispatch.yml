@@ -31,6 +31,16 @@ on:
         type: boolean
         default: false
         description: "true=使用 GitHub App token (需传 appId/appPrivateKey)；false=沿用 patToken"
+      tokenRepositories:
+        required: false
+        type: string
+        default: ""
+        description: "App token 需要访问的 repo 列表（逗号或换行分隔，例: reverse-bot-gui,reverse-bot-rs）。省略则仅当前 repo。"
+      tokenOwner:
+        required: false
+        type: string
+        default: ""
+        description: "App token 所属 org/user，省略则用当前 repo 的 owner"
     secrets:
       awsAccessKey:
         required: true
@@ -65,6 +75,8 @@ jobs:
         with:
           app-id: ${{ secrets.appId }}
           private-key: ${{ secrets.appPrivateKey }}
+          owner: ${{ inputs.tokenOwner }}
+          repositories: ${{ inputs.tokenRepositories }}
 
       - name: Resolve token source (日志)
         run: |
