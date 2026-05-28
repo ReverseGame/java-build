@@ -26,6 +26,11 @@ on:
       bucket:
         required: true
         type: string
+      useAppToken:
+        required: false
+        type: boolean
+        default: false
+        description: "true=使用 GitHub App token (需传 appId/appPrivateKey)；false=沿用 patToken"
     secrets:
       awsAccessKey:
         required: true
@@ -36,7 +41,14 @@ on:
       tauriKeyPassword:
         required: true
       patToken:
-        required: true
+        required: false
+        description: "PAT token，useAppToken=false 时必填（默认方案）"
+      appId:
+        required: false
+        description: "GitHub App ID，useAppToken=true 时必填"
+      appPrivateKey:
+        required: false
+        description: "GitHub App private key (PEM)，useAppToken=true 时必填"
 
 jobs:
   pr_new_version:
@@ -45,6 +57,14 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Generate GitHub App Token (可选)
+        if: ${{ inputs.useAppToken }}
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.appId }}
+          private-key: ${{ secrets.appPrivateKey }}
+
       - name: Echo client_payload
         run: |
           echo "client_payload sha: ${{ github.event.client_payload.sha }}"
@@ -53,7 +73,7 @@ jobs:
       - name: Checkout code (检出代码)
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.patToken }}
+          token: ${{ steps.app-token.outputs.token || secrets.patToken }}
           submodules: recursive
           fetch-depth: 0
       - name: show dir list
@@ -90,6 +110,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
+          token: ${{ steps.app-token.outputs.token || secrets.patToken }}
           add-paths: |
             ${{ steps.update_submodule.outputs.repo_name }}
           commit-message: "[create-pull-request] ${{ github.event.client_payload.message }}"
@@ -101,7 +122,7 @@ jobs:
         run: |
           gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin --merge
         env:
-          GH_TOKEN: ${{ secrets.patToken }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.patToken }}
 
       - name: post success message
         uses: foxundermoon/feishu-action@v2
