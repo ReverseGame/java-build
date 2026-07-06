@@ -28,6 +28,12 @@ on:
         required: false
         type: string
         default: '18.20.6'
+      envRule:
+        # 绑定 caller 仓库的 GitHub Environment（同 next.js 系模板），
+        # 让 vars 按环境解析；不传则为空 = 不绑定环境，兼容现有调用方
+        required: false
+        type: string
+        default: ''
     secrets:
       webhookFeishu:
         required: true
@@ -48,6 +54,7 @@ on:
 
 jobs:
   node_build:
+    environment: ${{ inputs.envRule }}
     runs-on: ubuntu-latest
     env:
       tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
