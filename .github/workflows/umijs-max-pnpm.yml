@@ -92,6 +92,10 @@ jobs:
       - name: Build
         run: pnpm build:${{ inputs.buildStage }}
         working-directory: ${{ inputs.workDir }}
+        env:
+          # 透传 caller 仓库的 Repository Variable（Settings → Actions → Variables）
+          # 未配置该变量的仓库拿到空字符串，对现有项目无影响
+          VITE_GA_ID: ${{ vars.VITE_GA_ID }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
