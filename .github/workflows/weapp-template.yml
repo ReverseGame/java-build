@@ -1,5 +1,9 @@
 name: Weapp CI
 
+# 构建与上传分离:
+#   build  跑在 GitHub 托管 ubuntu (访问 GitHub/npm 无障碍),产物打包传 COS
+#   upload 跑在腾讯云自建 runner wechat-app (固定出口 IP 可配微信白名单),
+#          只从 COS 拉产物 + miniprogram-ci 上传,不依赖 GitHub 网络
 on:
   workflow_call:
     inputs:
@@ -19,6 +23,20 @@ on:
         required: false
         type: string
         default: "GitHub Actions 自动上传"
+      nodeVersion:
+        required: false
+        type: string
+        default: "18.20.6"
+      pnpmVersion:
+        required: false
+        type: string
+        default: "9"
+      cosBucket:
+        required: true
+        type: string
+      cosRegion:
+        required: true
+        type: string
     secrets:
       webhookFeishu:
         required: true
@@ -28,15 +46,18 @@ on:
         required: false
       appId:
         required: true
+      TENCENT_SECRET_ID:
+        required: true
+      TENCENT_SECRET_KEY:
+        required: true
 
 jobs:
-  build_and_upload:
+  build:
     environment: ${{ inputs.envRule }}
-    runs-on: wechat-app
-    strategy:
-      matrix:
-        node-version: [18.x]
-
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      cosPath: ${{ steps.cos.outputs.cosPath }}
     steps:
       - name: 📨 构建开始通知
         uses: foxundermoon/feishu-action@v2
@@ -56,7 +77,7 @@ jobs:
                       text: 查看运行详情
                       href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: 🧩 生成唯一版本号
         id: version
@@ -65,40 +86,120 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "🧱 自动生成版本号: $VERSION"
 
-      - name: 📦 安装依赖
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
-      - run: pnpm install
+          version: ${{ inputs.pnpmVersion }}
 
-      - name: 🏗️ 构建微信小程序
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.nodeVersion }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.workDir }}/pnpm-lock.yaml
+
+      - name: 📦 安装依赖
+        run: pnpm install --no-frozen-lockfile
+        working-directory: ${{ inputs.workDir }}
+
+      - name: 🏗️ 构建微信小程序 (beta)
+        if: ${{ inputs.buildStage == 'beta' }}
         run: pnpm run build-beta:mp-weixin
         working-directory: ${{ inputs.workDir }}
-        if: ${{ inputs.buildStage == 'beta' }}
 
-      - run: pnpm run build:mp-weixin
-        working-directory: ${{ inputs.workDir }}
+      - name: 🏗️ 构建微信小程序 (product)
         if: ${{ inputs.buildStage == 'product' }}
+        run: pnpm run build:mp-weixin
+        working-directory: ${{ inputs.workDir }}
 
-      - name: 🧱 保存微信小程序私钥
+      - name: ⬆️ 产物打包上传 COS
+        id: cos
         run: |
-          echo "${{ secrets.wechatPrivateKey }}" > private.key
+          COS_PATH="weapp-ci/${{ inputs.projectName }}/${{ steps.version.outputs.version }}.tar.gz"
+          tar -czf weapp-dist.tar.gz -C ${{ inputs.workDir }}/dist/build/mp-weixin .
+          wget -q https://cosbrowser.cloud.tencent.com/software/coscli/coscli-linux-amd64 -O coscli
+          chmod +x coscli
+          ./coscli cp weapp-dist.tar.gz "cos://${{ inputs.cosBucket }}/$COS_PATH" \
+            -e cos.${{ inputs.cosRegion }}.myqcloud.com \
+            -i ${{ secrets.TENCENT_SECRET_ID }} -k ${{ secrets.TENCENT_SECRET_KEY }} \
+            --init-skip --err-retry-num 3
+          echo "cosPath=$COS_PATH" >> $GITHUB_OUTPUT
+          echo "✅ 产物已上传: cos://${{ inputs.cosBucket }}/$COS_PATH"
 
-          - name: 🚀 上传小程序代码
-          run: |
-            npx miniprogram-ci upload \
-              --pp ${{ inputs.workDir }}/dist/build/mp-weixin \
-              --pkp private.key \
-              --appid ${{ secrets.appId }} \
-              --uv ${{ steps.version.outputs.version }} \
-              -r 1 \
-              --enable-es6 true \
-          env:
-            NODE_OPTIONS: "--max-old-space-size=4096"
+      - name: 📨 构建失败通知
+        if: failure()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: "${{ inputs.projectName }} 小程序构建失败 🚫"
+                content:
+                  - - tag: text
+                      text: "环境: ${{ inputs.buildStage }}"
+                  - - tag: a
+                      text: 查看详情
+                      href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - name: 🧹 清理私钥
+  upload:
+    needs: build
+    environment: ${{ inputs.envRule }}
+    runs-on: wechat-app
+    steps:
+      - name: ⬇️ 从 COS 拉取构建产物
+        run: |
+          TOOL_DIR="$HOME/.weapp-ci"
+          mkdir -p "$TOOL_DIR"
+          if [ ! -x "$TOOL_DIR/coscli" ]; then
+            wget -q https://cosbrowser.cloud.tencent.com/software/coscli/coscli-linux-amd64 -O "$TOOL_DIR/coscli"
+            chmod +x "$TOOL_DIR/coscli"
+          fi
+          rm -rf weapp-dist weapp-dist.tar.gz
+          # coscli cp 下载前会 HeadBucket,受限密钥(仅对象级权限)会 403;
+          # 改用本地生成预签名 URL + curl,只需 GetObject 权限
+          SIGN_OUTPUT=$("$TOOL_DIR/coscli" signurl "cos://${{ inputs.cosBucket }}/${{ needs.build.outputs.cosPath }}" \
+            -t 600 \
+            -e cos.${{ inputs.cosRegion }}.myqcloud.com \
+            -i ${{ secrets.TENCENT_SECRET_ID }} -k ${{ secrets.TENCENT_SECRET_KEY }} \
+            --init-skip)
+          URL=$(echo "$SIGN_OUTPUT" | grep -oE 'https://\S+' | tail -n 1)
+          curl -fsS --retry 3 -o weapp-dist.tar.gz "$URL"
+          mkdir -p weapp-dist
+          tar -xzf weapp-dist.tar.gz -C weapp-dist
+          echo "✅ 产物已就绪: $(du -sh weapp-dist | cut -f1)"
+
+      - name: 🚀 上传小程序代码
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: |
+          TOOL_DIR="$HOME/.weapp-ci"
+          # runner 机器无系统 npm,自备 node(走 npmmirror 国内 CDN,缓存复用)
+          NODE_DIR="$TOOL_DIR/node"
+          if [ ! -x "$NODE_DIR/bin/node" ]; then
+            NODE_VER=v20.19.4
+            wget -q "https://registry.npmmirror.com/-/binary/node/$NODE_VER/node-$NODE_VER-linux-x64.tar.gz" -O "$TOOL_DIR/node.tar.gz"
+            mkdir -p "$NODE_DIR"
+            tar -xzf "$TOOL_DIR/node.tar.gz" -C "$NODE_DIR" --strip-components=1
+            rm -f "$TOOL_DIR/node.tar.gz"
+          fi
+          export PATH="$NODE_DIR/bin:$PATH"
+          echo "${{ secrets.wechatPrivateKey }}" > "$RUNNER_TEMP/private.key"
+          cd "$TOOL_DIR"
+          [ -f package.json ] || echo '{"name":"weapp-ci-tools","private":true}' > package.json
+          npm install miniprogram-ci@2 --registry=https://registry.npmmirror.com --no-audit --no-fund >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          "$TOOL_DIR/node_modules/.bin/miniprogram-ci" upload \
+            --pp weapp-dist \
+            --pkp "$RUNNER_TEMP/private.key" \
+            --appid ${{ secrets.appId }} \
+            --uv ${{ needs.build.outputs.version }} \
+            -r 1 \
+            --enable-es6 true \
+            --ud "${{ inputs.desc }}"
+
+      - name: 🧹 清理私钥与产物
         if: always()
-        run: rm -f private.key
+        run: rm -rf "$RUNNER_TEMP/private.key" weapp-dist weapp-dist.tar.gz
 
       - name: ✅ 上传完成通知
         uses: foxundermoon/feishu-action@v2
@@ -114,7 +215,7 @@ jobs:
                   - - tag: text
                       text: "环境: ${{ inputs.buildStage }}"
                   - - tag: text
-                      text: "版本: ${{ steps.version.outputs.version }}"
+                      text: "版本: ${{ needs.build.outputs.version }}"
                   - - tag: a
                       text: 查看详情
                       href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
