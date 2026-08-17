@@ -35,7 +35,9 @@ on:
         default: false
       mavenExtraArgs:
         # 追加到构建命令的额外 mvn 参数（如 -Dxxx.version=… 把可变 SNAPSHOT 依赖
-        # 钉到不可变的 timestamped 版本）。默认空，不影响现有 caller
+        # 钉到不可变的 timestamped 版本）。默认空，不影响现有 caller。
+        # 契约：以空白分隔的参数列表，参数值不得含空白、引号、反斜杠或换行
+        # （构建步骤会校验并快速失败，不做 shell quoting 还原）
         required: false
         type: string
         default: ''
@@ -103,9 +105,15 @@ jobs:
           servers: '[{ "id": "maven-s3-snapshots-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }, { "id": "maven-s3-releases-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
       - name: Build with Maven
         env:
-          # 经环境变量传入并按空白拆成参数数组，避免直接拼进 shell 命令产生注入面
+          # 经环境变量传入并按空白拆成参数数组，避免直接拼进 shell 命令产生注入面。
+          # 拆分不理解 shell quoting：含引号/反斜杠/换行的输入直接拒绝（快速失败，
+          # 不静默错拆或截断），带空白的参数值不受支持
           MAVEN_EXTRA_ARGS: ${{ inputs.mavenExtraArgs }}
         run: |
+          if [[ "$MAVEN_EXTRA_ARGS" == *$'\n'* ]] || printf '%s' "$MAVEN_EXTRA_ARGS" | grep -q "['\"\\\\]"; then
+            echo "::error::mavenExtraArgs 仅支持空格分隔、不含引号/反斜杠/换行的参数（如 -Dkey=value）；含空白的参数值不受支持"
+            exit 1
+          fi
           read -r -a EXTRA <<< "$MAVEN_EXTRA_ARGS"
           mvn --file ${{ inputs.workDir }}/pom.xml -Dmaven.test.skip=true clean package -U "${EXTRA[@]}"
       - name: Extract Maven project version
