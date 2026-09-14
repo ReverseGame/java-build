@@ -122,8 +122,14 @@ jobs:
           fi
 
           if [ "$DO_DEPLOY" = 1 ]; then
-            # -am 带上 parent 一起，保证 api 能解析构建；deploy 走 pom 的 distributionManagement
-            mvn -pl "$API_DIR" -am -Dmaven.test.skip=true deploy
+            # -am 带上 parent 一起，保证 api 能解析构建。
+            # SNAPSHOT 显式指定 snapshots 仓库：兜住部分仓库 pom 的 snapshotRepository url
+            # 被配串成 releases 的历史问题，避免快照发错位置导致依赖方从 snapshots 拉不到。
+            ALT=()
+            if [[ "$VER" == *-SNAPSHOT ]]; then
+              ALT+=("-DaltSnapshotDeploymentRepository=maven-s3-snapshots-repo::s3://$S3_BUCKET/snapshots")
+            fi
+            mvn -pl "$API_DIR" -am -Dmaven.test.skip=true "${ALT[@]}" deploy
             echo "✅ deployed $AID:$VER"
           else
             echo "⏭️  skipped $AID:$VER"
