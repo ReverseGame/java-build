@@ -127,7 +127,9 @@ jobs:
             # 被配串成 releases 的历史问题，避免快照发错位置导致依赖方从 snapshots 拉不到。
             ALT=()
             if [[ "$VER" == *-SNAPSHOT ]]; then
-              ALT+=("-DaltSnapshotDeploymentRepository=maven-s3-snapshots-repo::s3://$S3_BUCKET/snapshots")
+              # 三段式 id::layout::url —— maven-deploy-plugin 2.8.2（旧版）要求带 layout（default）；
+              # 两段式 id::url 只有 deploy-plugin 3.x 才支持，旧版会报 "Invalid syntax for repository"。
+              ALT+=("-DaltSnapshotDeploymentRepository=maven-s3-snapshots-repo::default::s3://$S3_BUCKET/snapshots")
             fi
             mvn -pl "$API_DIR" -am -Dmaven.test.skip=true "${ALT[@]}" deploy
             echo "✅ deployed $AID:$VER"
