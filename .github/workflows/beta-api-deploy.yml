@@ -1,0 +1,144 @@
+# API 发布默认关闭 Maven 云缓存，复用 runner 本地依赖。
+name: API deploy to S3 (version-aware)
+'on':
+  workflow_call:
+    inputs:
+      buildRunner:
+        description: API 发布任务使用的 Runner 标签
+        type: string
+        default: local-server
+      forceSnapshotDeploy:
+        description: API 或父 POM 变化时强制发布 SNAPSHOT
+        required: false
+        type: boolean
+        default: false
+      useMavenCache:
+        description: 是否通过 GitHub 恢复和保存 Maven 缓存；关闭时复用 runner 本机缓存
+        required: false
+        type: boolean
+        default: false
+      apiModuleDir:
+        description: API 模块相对仓库根的路径
+        required: true
+        type: string
+      javaVersion:
+        required: false
+        type: string
+        default: '11'
+      awsRegion:
+        required: false
+        type: string
+        default: us-east-1
+      s3Bucket:
+        required: false
+        type: string
+        default: s3-maven
+    secrets:
+      mavenUsername:
+        required: true
+      mavenPassword:
+        required: true
+jobs:
+  deploy-api:
+    runs-on: ${{ inputs.buildRunner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect api module change
+        id: change
+        env:
+          FORCE_CHANGED: ${{ inputs.forceSnapshotDeploy }}
+          API_DIR: ${{ inputs.apiModuleDir }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          changed=true
+          if [ "$FORCE_CHANGED" = "true" ]; then
+            changed=true
+          elif [ -n "${BEFORE:-}" ] \
+             && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$BEFORE" 2>/dev/null; then
+            if git diff --name-only "$BEFORE" "$SHA" -- "$API_DIR/" | grep -q .; then
+              changed=true
+            else
+              changed=false
+            fi
+          else
+            echo "无有效的 before 提交（首次 / force push / 手动触发），按有变更处理"
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "api 模块目录变更: $changed"
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.javaVersion }}
+          distribution: temurin
+          cache: ${{ inputs.useMavenCache && 'maven' || '' }}
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1
+        with:
+          maven-version: 3.9.9
+      - name: maven-settings-xml-action
+        uses: whelk-io/maven-settings-xml-action@v20
+        with:
+          repositories: '[{ "id": "maven-s3-snapshots-repo", "name": "maven-s3-snapshots-repo", "url": "s3://s3-maven/snapshots/", "releases": { "enabled": false }, "snapshots": { "enabled": true } }, { "id": "maven-s3-releases-repo", "name": "maven-s3-releases-repo", "url": "s3://s3-maven/releases/", "releases": { "enabled": true }, "snapshots": { "enabled": false } }]'
+          servers: '[{ "id": "maven-s3-snapshots-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }, { "id": "maven-s3-releases-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
+      - name: Version-aware deploy
+        env:
+          API_DIR: ${{ inputs.apiModuleDir }}
+          S3_BUCKET: ${{ inputs.s3Bucket }}
+          API_CHANGED: ${{ steps.change.outputs.changed }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.mavenUsername }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.mavenPassword }}
+          AWS_DEFAULT_REGION: ${{ inputs.awsRegion }}
+        run: |
+          set -euo pipefail
+
+          # 从目标 api 的 pom 动态解析 version / groupId / artifactId（兼容 property 或写死）
+          read -r VER GID AID < <(mvn --file "$API_DIR/pom.xml" -q \
+            -Dexec.executable=echo \
+            -Dexec.args='${project.version} ${project.groupId} ${project.artifactId}' \
+            --non-recursive exec:exec)
+          if [ -z "${VER:-}" ] || [ -z "${GID:-}" ] || [ -z "${AID:-}" ]; then
+            echo "::error::无法从 $API_DIR/pom.xml 解析 version/groupId/artifactId"
+            exit 1
+          fi
+          echo "api 模块: $GID:$AID:$VER"
+
+          DO_DEPLOY=0
+          if [[ "$VER" == *-SNAPSHOT ]]; then
+            if [ "$API_CHANGED" = "true" ]; then
+              echo "SNAPSHOT 且 api 模块目录有变更 → deploy"
+              DO_DEPLOY=1
+            else
+              echo "SNAPSHOT 但 api 模块目录无变更 → 跳过"
+            fi
+          else
+            GPATH="${GID//.//}"
+            S3_PATH="s3://$S3_BUCKET/releases/$GPATH/$AID/$VER/"
+            if aws s3 ls "$S3_PATH" >/dev/null 2>&1; then
+              echo "release $VER 已存在（版本号未变）→ 跳过：$S3_PATH"
+            else
+              echo "release $VER 尚未发布（版本号已变）→ deploy"
+              DO_DEPLOY=1
+            fi
+          fi
+
+          if [ "$DO_DEPLOY" = 1 ]; then
+            # -am 带上 parent 一起，保证 api 能解析构建。
+            # SNAPSHOT 显式指定 snapshots 仓库：兜住部分仓库 pom 的 snapshotRepository url
+            # 被配串成 releases 的历史问题，避免快照发错位置导致依赖方从 snapshots 拉不到。
+            ALT=()
+            if [[ "$VER" == *-SNAPSHOT ]]; then
+              # 三段式 id::layout::url —— maven-deploy-plugin 2.8.2（旧版）要求带 layout（default）；
+              # 两段式 id::url 只有 deploy-plugin 3.x 才支持，旧版会报 "Invalid syntax for repository"。
+              ALT+=("-DaltSnapshotDeploymentRepository=maven-s3-snapshots-repo::default::s3://$S3_BUCKET/snapshots")
+            fi
+            mvn -pl "$API_DIR" -am -Dmaven.test.skip=true "${ALT[@]}" deploy
+            echo "✅ deployed $AID:$VER"
+          else
+            echo "⏭️  skipped $AID:$VER"
+          fi
+    timeout-minutes: 20

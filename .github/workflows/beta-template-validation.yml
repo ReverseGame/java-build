@@ -1,0 +1,47 @@
+name: Beta template validation
+
+on:
+  pull_request:
+    branches: [ "main", "feat/ci-local-buildkit-cache-20260924-ycs" ]
+    paths:
+      - ".github/workflows/**"
+      - ".github/scripts/**"
+      - ".github/actionlint.yaml"
+  push:
+    branches: [ "main", "feat/ci-local-buildkit-cache-20260924-ycs" ]
+    paths:
+      - ".github/workflows/**"
+      - ".github/scripts/**"
+      - ".github/actionlint.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      # pull_request 默认检出合并结果，以便发现双方新增任务造成的重复键。
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Test reusable template contracts
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/beta-template-validation" --no-package-lock --ignore-scripts --no-audit --no-fund js-yaml@4.1.0
+          NODE_PATH="$RUNNER_TEMP/beta-template-validation/node_modules" node --test .github/scripts/beta-template-contract.test.cjs
+      - name: Validate Java deployment workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            -o "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" \
+            | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          # 校验 Java 的 beta 部署配置和本工作流，不执行发布脚本。
+          "$RUNNER_TEMP/actionlint" -color -shellcheck= -pyflakes= \
+            .github/workflows/beta-*.yml

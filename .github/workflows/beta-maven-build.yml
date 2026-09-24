@@ -1,0 +1,261 @@
+# beta 专用模板：默认仅复用本地 Maven 仓库，不恢复或上传 GitHub 云缓存。
+name: Beta Java build and deploy
+'on':
+  workflow_call:
+    inputs:
+      buildRunner:
+        description: 构建任务使用的 Runner 标签
+        type: string
+        default: local-server
+      deployRunner:
+        description: 部署任务使用的 Runner 标签，部署专用实例就绪后可改为 local-deploy
+        type: string
+        default: local-server
+      useMavenCache:
+        description: 是否通过 GitHub 恢复和保存 Maven 缓存；关闭时复用 runner 本机缓存
+        required: false
+        type: boolean
+        default: false
+      projectName:
+        required: true
+        type: string
+      buildStage:
+        required: true
+        type: string
+      workDir:
+        required: true
+        type: string
+      projectPrefix:
+        required: true
+        type: string
+      encrypt:
+        required: false
+        type: boolean
+        default: false
+      dockerFile:
+        # beta caller 显式指定分层 Dockerfile，默认兼容普通镜像。
+        required: false
+        type: string
+        default: Dockerfile
+      mavenExtraArgs:
+        required: false
+        type: string
+        default: ''
+    secrets:
+      webhookFeishu:
+        required: true
+      dockerUrl:
+        required: true
+      dockerRepo:
+        required: true
+      dockerUsername:
+        required: true
+      dockerPassword:
+        required: true
+      mavenUsername:
+        required: true
+      mavenPassword:
+        required: true
+      kubeConfig:
+        required: true
+      encryptKey:
+        required: false
+jobs:
+  java_reuse_build:
+    runs-on: ${{ inputs.buildRunner }}
+    env:
+      # 当前镜像仓库不支持默认构建证明的 OCI 清单，关闭证明以兼容推送。
+      BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始构建
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@v4
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: temurin
+          cache: ${{ inputs.useMavenCache && 'maven' || '' }}
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1
+        with:
+          maven-version: 3.9.9
+      - name: maven-settings-xml-action
+        uses: whelk-io/maven-settings-xml-action@v20
+        with:
+          repositories: '[{ "id": "maven-s3-snapshots-repo", "name": "maven-s3-snapshots-repo", "url": "s3://s3-maven/snapshots/", "releases": { "enabled": false }, "snapshots": { "enabled": true } }, { "id": "maven-s3-releases-repo", "name": "maven-s3-releases-repo", "url": "s3://s3-maven/releases/", "releases": { "enabled": true }, "snapshots": { "enabled": false } }]'
+          servers: '[{ "id": "maven-s3-snapshots-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }, { "id": "maven-s3-releases-repo", "username": "${{ secrets.mavenUsername }}", "password": "${{ secrets.mavenPassword }}" }]'
+      - name: Build with Maven
+        env:
+          MAVEN_EXTRA_ARGS: ${{ inputs.mavenExtraArgs }}
+        run: |
+          if [[ "$MAVEN_EXTRA_ARGS" == *$'\n'* ]] || printf '%s' "$MAVEN_EXTRA_ARGS" | grep -q "['\"\\\\]"; then
+            echo "::error::mavenExtraArgs 仅支持空格分隔、不含引号/反斜杠/换行的参数（如 -Dkey=value）；含空白的参数值不受支持"
+            exit 1
+          fi
+          read -r -a EXTRA <<< "$MAVEN_EXTRA_ARGS"
+          mvn --file ${{ inputs.workDir }}/pom.xml -Dmaven.test.skip=true clean package -U "${EXTRA[@]}"
+      - name: Extract Maven project version
+        run: echo "version=$(mvn --file ${{ inputs.workDir }}/pom.xml -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> "$GITHUB_OUTPUT"
+        id: project
+      - name: Extract Maven project name
+        run: echo "artifactId=$(mvn --file ${{ inputs.workDir }}/pom.xml -q -Dexec.executable=echo -Dexec.args='${project.artifactId}' --non-recursive exec:exec)" >> "$GITHUB_OUTPUT"
+        id: artifactId
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.dockerUrl }}
+          username: ${{ secrets.dockerUsername }}
+          password: ${{ secrets.dockerPassword }}
+      # 使用容器化 BuildKit，统一各 runner 的构建后端；缓存保存在现有镜像仓库。
+      - name: Set up pinned BuildKit
+        id: buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        with:
+          version: v0.37.1
+          driver: docker-container
+          driver-opts: image=moby/buildkit:v0.33.0
+          cache-binary: false
+      - name: Build and push Docker images with encrypt
+        if: inputs.encrypt
+        uses: docker/build-push-action@v3.1.1
+        with:
+          push: true
+          context: ${{ inputs.workDir }}
+          file: ${{ inputs.workDir }}/${{ inputs.dockerFile }}
+          builder: ${{ steps.buildx.outputs.name }}
+          # 仓库不接受独立 BuildKit 缓存清单；使用普通镜像标签承载 inline 缓存。
+          cache-from: type=registry,ref=${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-buildcache-v1
+          cache-to: type=inline
+          tags: |
+            ${{ env.tag }}
+            ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-buildcache-v1
+          build-args: |
+            JAR_FILE=${{ steps.artifactId.outputs.artifactId }}-${{ steps.project.outputs.version }}-exec.jar
+            PROFILE=${{ inputs.buildStage }}
+            ENCRYPT=${{ secrets.encryptKey }}
+      - name: Build and push Docker images
+        if: inputs.encrypt == false
+        uses: docker/build-push-action@v3.1.1
+        with:
+          push: true
+          context: ${{ inputs.workDir }}
+          file: ${{ inputs.workDir }}/${{ inputs.dockerFile }}
+          builder: ${{ steps.buildx.outputs.name }}
+          # 仓库不接受独立 BuildKit 缓存清单；使用普通镜像标签承载 inline 缓存。
+          cache-from: type=registry,ref=${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-buildcache-v1
+          cache-to: type=inline
+          tags: |
+            ${{ env.tag }}
+            ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-buildcache-v1
+          build-args: |
+            JAR_FILE=${{ steps.artifactId.outputs.artifactId }}-${{ steps.project.outputs.version }}-exec.jar
+            PROFILE=${{ inputs.buildStage }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
+    timeout-minutes: 30
+  deploy_local:
+    if: inputs.buildStage == 'beta'
+    needs: java_reuse_build
+    runs-on: ${{ inputs.deployRunner }}
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始部署
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@v4
+      - name: deploy to fellas cluster
+        uses: znl1087/kubectl@master
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: '--namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ${{ inputs.workDir }}/k8s-${{ inputs.buildStage }}.yaml || true'
+      - name: apply
+        uses: znl1087/kubectl@master
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: '--namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}'
+      # 等待新镜像通过已有就绪探针后再报告部署完成。
+      - name: Wait for beta rollout
+        timeout-minutes: 6
+        uses: znl1087/kubectl@master
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} rollout status deployment/${{ inputs.projectName }} --timeout=300s
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
+    timeout-minutes: 10
