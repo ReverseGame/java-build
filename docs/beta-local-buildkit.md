@@ -7,7 +7,8 @@
 
 沿用 projectName、workDir、buildStage、projectPrefix、encrypt、dockerFile、mavenExtraArgs；
 useMavenCache 默认 false。buildRunner、deployRunner 默认 local-server，部署专用实例准备好后可将 deployRunner 改为 local-deploy。
-API 模板保留 apiModuleDir、forceSnapshotDeploy、javaVersion、awsRegion、s3Bucket，buildRunner 默认 local-server。
+API 模板保留 apiModuleDir、forceSnapshotDeploy、javaVersion、awsRegion、s3Bucket，buildRunner 默认 ubuntu-latest。
+API 发布改用 GitHub 托管机器做性能验证，useMavenCache 仍默认 false；需要回退时可由调用方显式传 buildRunner: local-server。
 API job id 保持 deploy-api，兼容消费者按 deploy-api / deploy-api 等待的逻辑。
 
 ## 构建要求

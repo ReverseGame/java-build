@@ -1,19 +1,19 @@
-# API 发布默认关闭 Maven 云缓存，复用 runner 本地依赖。
+# API 发布默认使用 GitHub 托管 Runner，继续关闭 Maven 云缓存。
 name: API deploy to S3 (version-aware)
 'on':
   workflow_call:
     inputs:
       buildRunner:
-        description: API 发布任务使用的 Runner 标签
+        description: API 发布任务使用的 Runner 标签，默认使用 GitHub 托管机器
         type: string
-        default: local-server
+        default: ubuntu-latest
       forceSnapshotDeploy:
         description: API 或父 POM 变化时强制发布 SNAPSHOT
         required: false
         type: boolean
         default: false
       useMavenCache:
-        description: 是否通过 GitHub 恢复和保存 Maven 缓存；关闭时复用 runner 本机缓存
+        description: 是否通过 GitHub 恢复和保存 Maven 缓存；默认关闭
         required: false
         type: boolean
         default: false

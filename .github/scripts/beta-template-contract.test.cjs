@@ -12,10 +12,11 @@ function workflow(filename) {
 const build = workflow('beta-maven-build.yml');
 const api = workflow('beta-api-deploy.yml');
 
-test('本地依赖默认复用，构建和 API 发布均不恢复或上传 Maven 云缓存', () => {
+test('API 使用 GitHub 托管 Runner，镜像使用本地 Runner，均关闭 Maven 云缓存', () => {
+    assert.equal(build.on.workflow_call.inputs.buildRunner.default, 'local-server');
+    assert.equal(api.on.workflow_call.inputs.buildRunner.default, 'ubuntu-latest');
     for (const current of [build, api]) {
         assert.equal(current.on.workflow_call.inputs.useMavenCache.default, false);
-        assert.equal(current.on.workflow_call.inputs.buildRunner.default, 'local-server');
         const job = Object.values(current.jobs)[0];
         const java = job.steps.find(step => step.uses?.startsWith('actions/setup-java@'));
         assert.ok(java.with.cache.includes('inputs.useMavenCache'));
