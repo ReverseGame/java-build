@@ -33,6 +33,11 @@ on:
         required: false
         type: string
         default: ''
+      rustVersion:
+        description: rustup toolchain version, for example stable or 1.99.1
+        required: false
+        type: string
+        default: stable
     secrets:
       webhookFeishu:
         required: true
@@ -102,10 +107,18 @@ jobs:
           echo "Cargo config:"
           cat "${CARGO_HOME:-$HOME/.cargo}/config.toml"
       - name: Install musl toolchain
+        env:
+          RUST_VERSION: ${{ inputs.rustVersion }}
         run: |
+          case "$RUST_VERSION" in
+            ''|*[!A-Za-z0-9._-]*)
+              echo "Invalid rustVersion: $RUST_VERSION" >&2
+              exit 1
+              ;;
+          esac
           sudo apt-get update
           sudo apt-get install --yes musl-tools
-          rustup toolchain install 1.99.1 --profile minimal --target x86_64-unknown-linux-musl
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target x86_64-unknown-linux-musl
       - name: Cache Rust build
         uses: actions/cache@v4
         with:
@@ -114,14 +127,15 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-rust-1.99.1-musl-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          key: ${{ runner.os }}-rust-${{ inputs.rustVersion }}-musl-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-rust-1.99.1-musl-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-rust-${{ inputs.rustVersion }}-musl-${{ hashFiles('**/Cargo.lock') }}-
       - name: Build musl release once
         working-directory: ${{ inputs.workDir }}
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
-        run: cargo +1.99.1 build --release --locked --target x86_64-unknown-linux-musl
+          RUST_VERSION: ${{ inputs.rustVersion }}
+        run: cargo "+${RUST_VERSION}" build --release --locked --target x86_64-unknown-linux-musl
       - name: Verify static binary
         working-directory: ${{ inputs.workDir }}
         env:
