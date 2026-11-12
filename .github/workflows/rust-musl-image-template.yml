@@ -1,0 +1,360 @@
+name: Rust musl image
+
+on:
+  workflow_call:
+    inputs:
+      projectName:
+        required: true
+        type: string
+      buildStage:
+        required: true
+        type: string
+      workDir:
+        required: true
+        type: string
+      dockerDir:
+        required: false
+        type: string
+        default: ''
+      projectPrefix:
+        required: true
+        type: string
+      eks:
+        required: false
+        type: boolean
+        default: false
+      awsRegion:
+        required: false
+        type: string
+      clusterName:
+        required: false
+        type: string
+      binaryName:
+        required: false
+        type: string
+        default: ''
+    secrets:
+      webhookFeishu:
+        required: true
+      dockerUrl:
+        required: true
+      dockerRepo:
+        required: true
+      dockerUsername:
+        required: true
+      dockerPassword:
+        required: true
+      kubeConfig:
+        required: true
+      awsAccessKey:
+        required: false
+      awsSecretKey:
+        required: false
+      GH_PAT:
+        required: false
+jobs:
+  build-rust:
+    runs-on: ubuntu-22.04
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+
+    steps:
+      - name: post messasge
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始构建
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@v4
+      - name: Use PAT for private git deps
+        shell: bash
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -n "$GH_PAT" ]; then
+            git config --global --add url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "https://github.com/"
+            git config --global --add url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "git@github.com:"
+            git config --global --add url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "ssh://git@github.com/"
+            git config --global --add url."https://x-access-token:${GH_PAT}@github.com/".insteadOf "ssh://github.com/"
+          else
+            echo "GH_PAT not set; skip private deps auth"
+          fi
+      - name: Enable cargo net.git-fetch-with-cli
+        shell: bash
+        run: |
+          mkdir -p "${CARGO_HOME:-$HOME/.cargo}"
+          cat > "${CARGO_HOME:-$HOME/.cargo}/config.toml" <<'EOF'
+          [net]
+          git-fetch-with-cli = true
+          EOF
+          echo "Cargo config:"
+          cat "${CARGO_HOME:-$HOME/.cargo}/config.toml"
+      - name: Install musl toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes musl-tools
+          rustup toolchain install 1.99.1 --profile minimal --target x86_64-unknown-linux-musl
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-rust-1.99.1-musl-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-rust-1.99.1-musl-${{ hashFiles('**/Cargo.lock') }}-
+      - name: Build musl release once
+        working-directory: ${{ inputs.workDir }}
+        env:
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+        run: cargo +1.99.1 build --release --locked --target x86_64-unknown-linux-musl
+      - name: Verify static binary
+        working-directory: ${{ inputs.workDir }}
+        env:
+          BINARY_NAME: ${{ inputs.binaryName }}
+        run: |
+          if [ -z "$BINARY_NAME" ]; then
+            BINARY_NAME="$(sed -n 's/^name = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+          fi
+          binary="target/x86_64-unknown-linux-musl/release/${BINARY_NAME}"
+          file "$binary"
+          if readelf -lW "$binary" | grep -q INTERP || readelf -dW "$binary" | grep -q NEEDED; then
+            echo 'Expected a static musl binary for Alpine' >&2
+            exit 1
+          fi
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.dockerUrl }}
+          username: ${{ secrets.dockerUsername }}
+          password: ${{ secrets.dockerPassword }}
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          context: ${{ inputs.workDir }}
+          file: ${{ inputs.workDir }}/Dockerfile-${{ inputs.buildStage }}
+          tags: ${{ env.tag }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 构建结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
+  deploy_local:
+    if: inputs.buildStage == 'beta'
+    needs: build-rust
+    runs-on: local-server
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始部署
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@v4
+      - name: deploy to fellas cluster
+        uses: znl1087/kubectl@master
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}k8s-${{ inputs.buildStage }}.yaml || true
+      - name: apply
+        uses: znl1087/kubectl@master
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
+  deploy_product:
+    if: inputs.buildStage == 'product' && !inputs.eks
+    needs: build-rust
+    runs-on: ubuntu-latest
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始部署
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@v4
+      - name: deploy to fellas cluster
+        uses: steebchen/kubectl@v2.0.0
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}k8s-${{ inputs.buildStage }}.yaml || true
+      - name: apply
+        uses: steebchen/kubectl@v2.0.0
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
+
+  deploy_eks:
+    if: inputs.buildStage == 'product' && inputs.eks
+    needs: build-rust
+    runs-on: ubuntu-latest
+    env:
+      tag: ${{ secrets.dockerUrl }}/${{ secrets.dockerRepo }}/${{ inputs.projectName }}:${{ inputs.buildStage }}-${{ github.sha }}
+      aws_region: ${{ inputs.awsRegion }}
+
+    steps:
+      - name: post message
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 开始部署
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.awsAccessKey }}
+          aws-secret-access-key: ${{ secrets.awsSecretKey }}
+          aws-region: ${{ env.aws_region }}
+      - uses: actions/checkout@v4
+      - name: create
+        uses: ianbelcher/eks-kubectl-action@master
+        with:
+          cluster_name: ${{ inputs.clusterName }}
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}k8s-${{ inputs.buildStage }}.yaml
+      - name: apply
+        uses: ianbelcher/eks-kubectl-action@master
+        with:
+          cluster_name: ${{ inputs.clusterName }}
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+      - name: post success message
+        if: always()
+        uses: foxundermoon/feishu-action@v2
+        with:
+          url: ${{ secrets.webhookFeishu }}
+          msg_type: post
+          content: |
+            post:
+              zh_cn:
+                title: ${{ inputs.projectName }} 部署结果 ${{ job.status }}!
+                content:
+                - - tag: text
+                    un_escape: true
+                    text: '部署环境: ${{ inputs.buildStage }}'
+                - - tag: text
+                    text: '部署链接: '
+                  - tag: a
+                    text: github action
+                    href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                - - tag: text
+                    text: '镜像tag: '
+                  - tag: text
+                    text: ${{ env.tag }}
