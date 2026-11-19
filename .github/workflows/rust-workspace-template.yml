@@ -226,7 +226,6 @@ jobs:
         shell: bash
         env:
           NAMESPACE: ${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
-          PROJECT_NAME: ${{ inputs.projectName }}
           MANIFEST: ./${{ inputs.dockerDir }}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
           KUBE_CONFIG_DATA: ${{ secrets.kubeConfig }}
         run: |
@@ -236,14 +235,9 @@ jobs:
           export KUBECONFIG
           trap 'rm -f "$KUBECONFIG"' EXIT
           printf '%s' "$KUBE_CONFIG_DATA" | base64 --decode > "$KUBECONFIG"
-          existing="$(kubectl --namespace="$NAMESPACE" get deployment/"$PROJECT_NAME" --ignore-not-found -o name)"
-          if [ -z "$existing" ]; then
-            kubectl --namespace="$NAMESPACE" apply -f "$MANIFEST"
-          else
-            # shortcut: 清单按单服务部署；多 Deployment 需逐个查询后过滤。
-            manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
-            resources="$(printf '%s' "$manifest_json" | python -c '
-          import json, sys
+          manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
+          resources="$(printf '%s' "$manifest_json" | python -c '
+          import json, os, subprocess, sys
           data = sys.stdin.read().strip()
           decoder = json.JSONDecoder()
           items = []
@@ -253,13 +247,23 @@ jobs:
               data = data[offset:].lstrip()
           if not items:
               raise ValueError("kubectl returned no resources")
-          resources = [item for item in items if item.get("kind") != "Deployment"]
+          resources = []
+          for item in items:
+              if item.get("kind") == "Deployment":
+                  metadata = item["metadata"]
+                  namespace = metadata.get("namespace") or os.environ["NAMESPACE"]
+                  existing = subprocess.check_output([
+                      "kubectl", "--namespace=" + namespace, "get", "deployment/" + metadata["name"],
+                      "--ignore-not-found", "-o", "name"
+                  ], text=True)
+                  if existing.strip():
+                      continue
+              resources.append(item)
           if resources:
               json.dump({"apiVersion": "v1", "kind": "List", "items": resources}, sys.stdout)
           ')"
-            if [ -n "$resources" ]; then
-              printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
-            fi
+          if [ -n "$resources" ]; then
+            printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
           fi
       - name: apply
         uses: znl1087/kubectl@master
@@ -340,7 +344,6 @@ jobs:
         shell: bash
         env:
           NAMESPACE: ${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
-          PROJECT_NAME: ${{ inputs.projectName }}
           MANIFEST: ./${{ inputs.dockerDir }}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
           KUBE_CONFIG_DATA: ${{ secrets.kubeConfig }}
         run: |
@@ -350,14 +353,9 @@ jobs:
           export KUBECONFIG
           trap 'rm -f "$KUBECONFIG"' EXIT
           printf '%s' "$KUBE_CONFIG_DATA" | base64 --decode > "$KUBECONFIG"
-          existing="$(kubectl --namespace="$NAMESPACE" get deployment/"$PROJECT_NAME" --ignore-not-found -o name)"
-          if [ -z "$existing" ]; then
-            kubectl --namespace="$NAMESPACE" apply -f "$MANIFEST"
-          else
-            # shortcut: 清单按单服务部署；多 Deployment 需逐个查询后过滤。
-            manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
-            resources="$(printf '%s' "$manifest_json" | python -c '
-          import json, sys
+          manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
+          resources="$(printf '%s' "$manifest_json" | python -c '
+          import json, os, subprocess, sys
           data = sys.stdin.read().strip()
           decoder = json.JSONDecoder()
           items = []
@@ -367,13 +365,23 @@ jobs:
               data = data[offset:].lstrip()
           if not items:
               raise ValueError("kubectl returned no resources")
-          resources = [item for item in items if item.get("kind") != "Deployment"]
+          resources = []
+          for item in items:
+              if item.get("kind") == "Deployment":
+                  metadata = item["metadata"]
+                  namespace = metadata.get("namespace") or os.environ["NAMESPACE"]
+                  existing = subprocess.check_output([
+                      "kubectl", "--namespace=" + namespace, "get", "deployment/" + metadata["name"],
+                      "--ignore-not-found", "-o", "name"
+                  ], text=True)
+                  if existing.strip():
+                      continue
+              resources.append(item)
           if resources:
               json.dump({"apiVersion": "v1", "kind": "List", "items": resources}, sys.stdout)
           ')"
-            if [ -n "$resources" ]; then
-              printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
-            fi
+          if [ -n "$resources" ]; then
+            printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
           fi
       - name: apply
         uses: steebchen/kubectl@v2.0.0
@@ -463,7 +471,6 @@ jobs:
         shell: bash
         env:
           NAMESPACE: ${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
-          PROJECT_NAME: ${{ inputs.projectName }}
           MANIFEST: ./${{ inputs.dockerDir }}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
           CLUSTER_NAME: ${{ inputs.clusterName }}
         run: |
@@ -473,14 +480,9 @@ jobs:
           export KUBECONFIG
           trap 'rm -f "$KUBECONFIG"' EXIT
           aws eks update-kubeconfig --name "$CLUSTER_NAME" --kubeconfig "$KUBECONFIG"
-          existing="$(kubectl --namespace="$NAMESPACE" get deployment/"$PROJECT_NAME" --ignore-not-found -o name)"
-          if [ -z "$existing" ]; then
-            kubectl --namespace="$NAMESPACE" apply -f "$MANIFEST"
-          else
-            # shortcut: 清单按单服务部署；多 Deployment 需逐个查询后过滤。
-            manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
-            resources="$(printf '%s' "$manifest_json" | python -c '
-          import json, sys
+          manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
+          resources="$(printf '%s' "$manifest_json" | python -c '
+          import json, os, subprocess, sys
           data = sys.stdin.read().strip()
           decoder = json.JSONDecoder()
           items = []
@@ -490,13 +492,23 @@ jobs:
               data = data[offset:].lstrip()
           if not items:
               raise ValueError("kubectl returned no resources")
-          resources = [item for item in items if item.get("kind") != "Deployment"]
+          resources = []
+          for item in items:
+              if item.get("kind") == "Deployment":
+                  metadata = item["metadata"]
+                  namespace = metadata.get("namespace") or os.environ["NAMESPACE"]
+                  existing = subprocess.check_output([
+                      "kubectl", "--namespace=" + namespace, "get", "deployment/" + metadata["name"],
+                      "--ignore-not-found", "-o", "name"
+                  ], text=True)
+                  if existing.strip():
+                      continue
+              resources.append(item)
           if resources:
               json.dump({"apiVersion": "v1", "kind": "List", "items": resources}, sys.stdout)
           ')"
-            if [ -n "$resources" ]; then
-              printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
-            fi
+          if [ -n "$resources" ]; then
+            printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
           fi
       - name: apply
         uses: ianbelcher/eks-kubectl-action@master
