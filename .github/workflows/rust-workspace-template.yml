@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: "k8s"
+      applyOnlyWhenMissing:
+        description: "仅首次创建 Deployment，已有 Deployment 只更新镜像"
+        required: false
+        type: boolean
+        default: false
       projectPrefix:
         required: true
         type: string
@@ -203,15 +208,74 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
       - name: deploy to fellas cluster
+        if: ${{ !inputs.applyOnlyWhenMissing }}
         uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml || true
+      - name: Install kubectl for first deployment mode
+        if: inputs.applyOnlyWhenMissing
+        uses: azure/setup-kubectl@v4
+      - name: Install Python for manifest filtering
+        if: inputs.applyOnlyWhenMissing
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Apply missing Deployment and other resources
+        if: inputs.applyOnlyWhenMissing
+        shell: bash
+        env:
+          NAMESPACE: ${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
+          MANIFEST: ./${{ inputs.dockerDir }}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
+          KUBE_CONFIG_DATA: ${{ secrets.kubeConfig }}
+        run: |
+          set -euo pipefail
+          umask 077
+          KUBECONFIG="$(mktemp)"
+          export KUBECONFIG
+          trap 'rm -f "$KUBECONFIG"' EXIT
+          printf '%s' "$KUBE_CONFIG_DATA" | base64 --decode > "$KUBECONFIG"
+          manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
+          resources="$(printf '%s' "$manifest_json" | python -c '
+          import json, os, subprocess, sys
+          data = sys.stdin.read().strip()
+          decoder = json.JSONDecoder()
+          items = []
+          while data:
+              manifest, offset = decoder.raw_decode(data)
+              items.extend(manifest["items"] if manifest.get("kind") == "List" else [manifest])
+              data = data[offset:].lstrip()
+          if not items:
+              raise ValueError("kubectl returned no resources")
+          resources = []
+          for item in items:
+              if item.get("kind") == "Deployment":
+                  metadata = item["metadata"]
+                  namespace = metadata.get("namespace") or os.environ["NAMESPACE"]
+                  existing = subprocess.check_output([
+                      "kubectl", "--namespace=" + namespace, "get", "deployment/" + metadata["name"],
+                      "--ignore-not-found", "-o", "name"
+                  ], text=True)
+                  if existing.strip():
+                      continue
+              resources.append(item)
+          if resources:
+              json.dump({"apiVersion": "v1", "kind": "List", "items": resources}, sys.stdout)
+          ')"
+          if [ -n "$resources" ]; then
+            printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
+          fi
       - name: apply
         uses: znl1087/kubectl@master
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+      - name: Wait for Deployment rollout
+        if: inputs.applyOnlyWhenMissing
+        uses: znl1087/kubectl@master
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} rollout status deployment/${{ inputs.projectName }} --timeout=5m
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
@@ -262,15 +326,74 @@ jobs:
                     href: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: actions/checkout@v3
       - name: deploy to fellas cluster
+        if: ${{ !inputs.applyOnlyWhenMissing }}
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml || true
+      - name: Install kubectl for first deployment mode
+        if: inputs.applyOnlyWhenMissing
+        uses: azure/setup-kubectl@v4
+      - name: Install Python for manifest filtering
+        if: inputs.applyOnlyWhenMissing
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Apply missing Deployment and other resources
+        if: inputs.applyOnlyWhenMissing
+        shell: bash
+        env:
+          NAMESPACE: ${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
+          MANIFEST: ./${{ inputs.dockerDir }}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
+          KUBE_CONFIG_DATA: ${{ secrets.kubeConfig }}
+        run: |
+          set -euo pipefail
+          umask 077
+          KUBECONFIG="$(mktemp)"
+          export KUBECONFIG
+          trap 'rm -f "$KUBECONFIG"' EXIT
+          printf '%s' "$KUBE_CONFIG_DATA" | base64 --decode > "$KUBECONFIG"
+          manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
+          resources="$(printf '%s' "$manifest_json" | python -c '
+          import json, os, subprocess, sys
+          data = sys.stdin.read().strip()
+          decoder = json.JSONDecoder()
+          items = []
+          while data:
+              manifest, offset = decoder.raw_decode(data)
+              items.extend(manifest["items"] if manifest.get("kind") == "List" else [manifest])
+              data = data[offset:].lstrip()
+          if not items:
+              raise ValueError("kubectl returned no resources")
+          resources = []
+          for item in items:
+              if item.get("kind") == "Deployment":
+                  metadata = item["metadata"]
+                  namespace = metadata.get("namespace") or os.environ["NAMESPACE"]
+                  existing = subprocess.check_output([
+                      "kubectl", "--namespace=" + namespace, "get", "deployment/" + metadata["name"],
+                      "--ignore-not-found", "-o", "name"
+                  ], text=True)
+                  if existing.strip():
+                      continue
+              resources.append(item)
+          if resources:
+              json.dump({"apiVersion": "v1", "kind": "List", "items": resources}, sys.stdout)
+          ')"
+          if [ -n "$resources" ]; then
+            printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
+          fi
       - name: apply
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.kubeConfig }}
           command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+      - name: Wait for Deployment rollout
+        if: inputs.applyOnlyWhenMissing
+        uses: steebchen/kubectl@v2.0.0
+        with:
+          config: ${{ secrets.kubeConfig }}
+          command: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} rollout status deployment/${{ inputs.projectName }} --timeout=5m
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
@@ -330,15 +453,74 @@ jobs:
           aws-region: ${{ env.aws_region }}
       - uses: actions/checkout@v3
       - name: create
+        if: ${{ !inputs.applyOnlyWhenMissing }}
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}
           args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} apply -f ./${{ inputs.dockerDir}}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
+      - name: Install kubectl for first deployment mode
+        if: inputs.applyOnlyWhenMissing
+        uses: azure/setup-kubectl@v4
+      - name: Install Python for manifest filtering
+        if: inputs.applyOnlyWhenMissing
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Apply missing Deployment and other resources
+        if: inputs.applyOnlyWhenMissing
+        shell: bash
+        env:
+          NAMESPACE: ${{ inputs.projectPrefix }}-${{ inputs.buildStage }}
+          MANIFEST: ./${{ inputs.dockerDir }}${{ inputs.k8sfile }}-${{ inputs.buildStage }}.yaml
+          CLUSTER_NAME: ${{ inputs.clusterName }}
+        run: |
+          set -euo pipefail
+          umask 077
+          KUBECONFIG="$(mktemp)"
+          export KUBECONFIG
+          trap 'rm -f "$KUBECONFIG"' EXIT
+          aws eks update-kubeconfig --name "$CLUSTER_NAME" --kubeconfig "$KUBECONFIG"
+          manifest_json="$(kubectl --namespace="$NAMESPACE" create --dry-run=client -f "$MANIFEST" -o json)"
+          resources="$(printf '%s' "$manifest_json" | python -c '
+          import json, os, subprocess, sys
+          data = sys.stdin.read().strip()
+          decoder = json.JSONDecoder()
+          items = []
+          while data:
+              manifest, offset = decoder.raw_decode(data)
+              items.extend(manifest["items"] if manifest.get("kind") == "List" else [manifest])
+              data = data[offset:].lstrip()
+          if not items:
+              raise ValueError("kubectl returned no resources")
+          resources = []
+          for item in items:
+              if item.get("kind") == "Deployment":
+                  metadata = item["metadata"]
+                  namespace = metadata.get("namespace") or os.environ["NAMESPACE"]
+                  existing = subprocess.check_output([
+                      "kubectl", "--namespace=" + namespace, "get", "deployment/" + metadata["name"],
+                      "--ignore-not-found", "-o", "name"
+                  ], text=True)
+                  if existing.strip():
+                      continue
+              resources.append(item)
+          if resources:
+              json.dump({"apiVersion": "v1", "kind": "List", "items": resources}, sys.stdout)
+          ')"
+          if [ -n "$resources" ]; then
+            printf '%s' "$resources" | kubectl --namespace="$NAMESPACE" apply -f -
+          fi
       - name: apply
         uses: ianbelcher/eks-kubectl-action@master
         with:
           cluster_name: ${{ inputs.clusterName }}
           args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} set image deployment/${{ inputs.projectName }} ${{ inputs.projectName }}=${{ env.tag }}
+      - name: Wait for Deployment rollout
+        if: inputs.applyOnlyWhenMissing
+        uses: ianbelcher/eks-kubectl-action@master
+        with:
+          cluster_name: ${{ inputs.clusterName }}
+          args: --namespace=${{ inputs.projectPrefix }}-${{ inputs.buildStage }} rollout status deployment/${{ inputs.projectName }} --timeout=5m
       - name: post success message
         if: always()
         uses: foxundermoon/feishu-action@v2
